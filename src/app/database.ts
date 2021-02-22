@@ -1,6 +1,35 @@
-export const prefixes = {
-  get(id: string): string | undefined {
-    return undefined
-  },
-  set(id: string, prefix: string): void {},
+import Discord from "discord.js"
+import Enmap from "enmap"
+
+//# Exemple with Enmap:
+
+/** Enmap<Guild, Prefix> */
+export const prefixes = new Enmap<Discord.Snowflake, string>({
+  name: "prefixes",
+})
+
+/**
+ * Enmap<User, Network>
+ */
+export const networks = new Enmap<Discord.Snowflake, Network>({
+  name: "networks",
+})
+
+/**
+ * Enmap<Channel, Hub>
+ */
+export const hubs = new Enmap<Discord.Snowflake, Hub>({
+  name: "hubs",
+})
+
+export interface Network {
+  password?: string
+  displayName: string
 }
+
+export interface Hub {
+  networkId: Discord.Snowflake
+  inviteLink?: string
+}
+
+// Docs: https://enmap.evie.dev/

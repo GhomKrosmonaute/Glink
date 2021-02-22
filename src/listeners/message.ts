@@ -10,14 +10,22 @@ const listener: app.Listener<"message"> = {
 
     if (message.content.startsWith(prefix)) {
       message.content = message.content.slice(prefix.length)
-    } else {
+    } else if (!message.author.bot) {
+      // messaging
+      const hub = app.hubs.get(message.channel.id)
+      if (hub) {
+        const hubs = app.hubs.filter((_hub) => {
+          return hub.networkId === _hub.networkId
+        })
+        await app.sendToHubs(message, hubs, hub.inviteLink)
+      }
       return
     }
 
     let key = message.content.split(/\s+/)[0]
     let cmd = app.commands.resolve(key)
 
-    if (!cmd) return null
+    if (!cmd) return
 
     // check sub commands
     {
