@@ -4,6 +4,7 @@ import * as app from "../app"
 const command: app.Command = {
   name: "join",
   description: "Join a network, make current channel as hub",
+  guildOwner: true,
   positional: [
     {
       name: "networkId",
