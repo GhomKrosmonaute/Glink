@@ -2,6 +2,7 @@ import * as app from "../app"
 
 const command: app.Command = {
   name: "leave",
+  aliases: ["exit", "quit"],
   guildOwner: true,
   description: "Leave e network, remove virtual",
   async run(message) {
