@@ -28,6 +28,7 @@ const command: app.Command = {
     {
       name: "password",
       checkValue: /.{5,64}/,
+      aliases: ["pass", "pw"],
     },
   ],
   async run(message) {
@@ -36,7 +37,7 @@ const command: app.Command = {
       inviteLink: message.args.inviteLink ?? undefined,
     }
 
-    if (app.getNetworkHubs(hub.networkId).length > 9)
+    if (app.getNetworkHubs(hub.networkId).size > 9)
       return message.channel.send("This network has too many hubs... (max 10)")
 
     const network = app.networks.get(hub.networkId)

@@ -14,6 +14,7 @@ const command: app.Command = {
   args: [
     {
       name: "password",
+      aliases: ["pass", "pw"],
       checkValue: /.{5,64}/,
     },
   ],

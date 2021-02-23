@@ -45,7 +45,14 @@ function glinkEmbedFrom(
 }
 
 export function getNetworkHubs(networkId: app.Snowflake) {
-  return app.hubs.filterArray((hub) => {
+  return app.hubs.filter((hub) => {
     return hub.networkId === networkId
   })
+}
+
+export function removeNetwork(networkId: app.Snowflake) {
+  getNetworkHubs(networkId).forEach((hub, id) => {
+    app.hubs.delete(id)
+  })
+  app.networks.delete(networkId)
 }
