@@ -8,7 +8,7 @@ const listener: app.Listener<"guildMemberRemove"> = {
         guild.members.cache.has(member.id)
       )
     ) {
-      app.removeNetwork(member.id)
+      app.removeNetwork.bind(member.client)(member.id)
     }
   },
 }

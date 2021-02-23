@@ -50,9 +50,28 @@ export function getNetworkHubs(networkId: app.Snowflake) {
   })
 }
 
-export function removeNetwork(networkId: app.Snowflake) {
+export function removeNetwork(this: app.Client, networkId: app.Snowflake) {
+  const network = app.networks.get(networkId)
+
+  if (!network) return
+
+  const reason = `The "**${network.displayName}**" network was removed.`
+
   getNetworkHubs(networkId).forEach((hub, id) => {
-    app.hubs.delete(id)
+    removeHub.bind(this)(hub, id, reason)
   })
   app.networks.delete(networkId)
+}
+
+export function removeHub(
+  this: app.Client,
+  hub: app.Hub,
+  channelId: app.Snowflake,
+  reason: string
+) {
+  app.hubs.delete(channelId)
+
+  const channel = this.channels.cache.get(channelId)
+
+  if (channel && channel.isText()) channel.send(reason).catch()
 }
