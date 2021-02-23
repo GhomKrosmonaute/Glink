@@ -32,6 +32,46 @@ const command: app.Command = {
       }**" network.`
     )
   },
+  subs: [
+    {
+      name: "list",
+      aliases: ["ls"],
+      networkOwner: true,
+      async run(message) {
+        new app.Paginator(
+          app.Paginator.divider(
+            Array.from(
+              app.muted
+                .filter((muted) => {
+                  return muted.networkId === message.author.id
+                })
+                .entries()
+            ),
+            10
+          ).map((page) =>
+            new app.MessageEmbed()
+              .setTitle(
+                "Muted list - " +
+                  app.networks.get(message.author.id)?.displayName
+              )
+              .setDescription(
+                page
+                  .map(([id, muted]) => {
+                    return `\`${app
+                      .dayjs(muted.date)
+                      .format("DD/MM/YY HH:mm")}\` - **${id}** - ${
+                      muted.reason ?? "undefined reason"
+                    }`
+                  })
+                  .join("\n")
+              )
+          ),
+          message.channel,
+          (reaction, user) => user.id === message.author.id
+        )
+      },
+    },
+  ],
 }
 
 module.exports = command
