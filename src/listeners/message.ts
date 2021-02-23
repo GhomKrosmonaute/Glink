@@ -115,6 +115,17 @@ const listener: app.Listener<"message"> = {
             )
         )
 
+    if (cmd.networkOwner)
+      if (!app.networks.has(message.author.id))
+        return await message.channel.send(
+          new app.MessageEmbed()
+            .setColor("RED")
+            .setAuthor(
+              "You must have setup a network.",
+              message.client.user?.displayAvatarURL()
+            )
+        )
+
     if (cmd.botPermissions)
       for (const permission of cmd.botPermissions)
         if (
