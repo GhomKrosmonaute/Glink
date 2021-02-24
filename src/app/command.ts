@@ -190,6 +190,7 @@ export interface Command {
   description?: string
   longDescription?: string
   examples?: string[]
+  hubOnly?: boolean
   networkOwner?: boolean
   guildOwner?: boolean
   botOwner?: boolean

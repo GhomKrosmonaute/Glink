@@ -133,6 +133,17 @@ const listener: app.Listener<"message"> = {
             )
         )
 
+    if (cmd.hubOnly)
+      if (!app.hubs.has(message.channel.id))
+        return await message.channel.send(
+          new app.MessageEmbed()
+            .setColor("RED")
+            .setAuthor(
+              "You must use this command in a hub.",
+              message.client.user?.displayAvatarURL()
+            )
+        )
+
     if (cmd.botPermissions)
       for (const permission of cmd.botPermissions)
         if (
