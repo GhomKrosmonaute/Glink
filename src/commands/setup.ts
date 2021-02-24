@@ -27,7 +27,7 @@ const command: app.Command = {
     app.networks.set(message.author.id, network)
 
     return message.channel.send(
-      `The "**${network.displayName}**" network successful created.`
+      `The "**${network.displayName}**" network successful created. \`ID:${message.author.id}\``
     )
   },
 }
