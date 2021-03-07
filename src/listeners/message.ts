@@ -14,11 +14,9 @@ const listener: app.Listener<"message"> = {
       // messaging
       const hub = app.hubs.get(message.channel.id)
       if (hub) {
-        if (
-          app.muted
-            .filter((muted) => muted.networkId === hub.networkId)
-            .has(message.author.id)
-        )
+        const mutes = app.mutes.ensure(hub.networkId, [])
+
+        if (mutes.some((mute) => mute.userId === message.author.id))
           return message.delete()
 
         const hubs = app.hubs.filter((_hub) => {

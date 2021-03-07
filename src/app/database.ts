@@ -22,8 +22,11 @@ export const hubs = new Enmap<Discord.Snowflake, Hub>({
   name: "hubs",
 })
 
-export const muted = new Enmap<Discord.Snowflake, Muted>({
-  name: "muted",
+/**
+ * Enmap<Network, Mutes>
+ */
+export const mutes = new Enmap<Discord.Snowflake, Mute[]>({
+  name: "mutes",
 })
 
 export interface Network {
@@ -36,8 +39,8 @@ export interface Hub {
   inviteLink?: string
 }
 
-export interface Muted {
-  networkId: Discord.Snowflake
+export interface Mute {
+  userId: Discord.Snowflake
   reason?: string
   date: number
 }

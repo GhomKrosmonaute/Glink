@@ -20,11 +20,16 @@ const command: app.Command = {
 
     if (!user) return message.channel.send("This user do not exists.")
 
-    app.muted.set(user.id, {
-      networkId: message.author.id,
-      reason: message.args.reason ?? undefined,
-      date: Date.now(),
-    })
+    const mutes = app.mutes.ensure(message.author.id, [])
+
+    app.mutes.set(message.author.id, [
+      ...mutes,
+      {
+        userId: user.id,
+        reason: message.args.reason ?? undefined,
+        date: Date.now(),
+      },
+    ])
 
     return message.channel.send(
       `You have successfully muted **${user.username}** from the "**${
@@ -40,13 +45,7 @@ const command: app.Command = {
       async run(message) {
         new app.Paginator(
           app.Paginator.divider(
-            Array.from(
-              app.muted
-                .filter((muted) => {
-                  return muted.networkId === message.author.id
-                })
-                .entries()
-            ),
+            app.mutes.ensure(message.author.id, []),
             10
           ).map((page) =>
             new app.MessageEmbed()
@@ -56,11 +55,11 @@ const command: app.Command = {
               )
               .setDescription(
                 page
-                  .map(([id, muted]) => {
+                  .map((mute) => {
                     return `\`${app
-                      .dayjs(muted.date)
-                      .format("DD/MM/YY HH:mm")}\` - **${id}** - ${
-                      muted.reason ?? "undefined reason"
+                      .dayjs(mute.date)
+                      .format("DD/MM/YY HH:mm")}\` - **${mute.userId}** - ${
+                      mute.reason ?? "undefined reason"
                     }`
                   })
                   .join("\n")

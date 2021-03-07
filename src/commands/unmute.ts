@@ -14,12 +14,12 @@ const command: app.Command = {
 
     if (!user) return message.channel.send("This user do not exists.")
 
-    const muted = app.muted.get(user.id)
+    const mutes = app.mutes.ensure(message.author.id, [])
 
-    if (!muted)
+    if (!mutes.some((mute) => mute.userId === user.id))
       return message.channel.send(`**${user.username}** is not muted.`)
 
-    app.muted.delete(user.id)
+    app.mutes.delete(user.id)
 
     return message.channel.send(
       `You have successfully un-muted **${user.username}** from the "**${
