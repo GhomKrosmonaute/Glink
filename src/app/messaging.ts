@@ -67,6 +67,21 @@ function glinkEmbedFrom(
     }
   }
 
+  const match = /^<a?:[a-z-_]+:(\d+)>$/i.exec(message.content)
+
+  if (match) {
+    const emoji = message.client.emojis.resolve(match[1])
+    if (emoji) {
+      if (!embed.image) {
+        message.content = ""
+        embed.setImage(emoji.url)
+      } else if (!embed.thumbnail) {
+        message.content = ""
+        embed.setThumbnail(emoji.url)
+      }
+    }
+  }
+
   if (message.content) embed.setDescription(message.content)
 
   return embed
