@@ -1,5 +1,6 @@
 import * as app from "../app"
 import Enmap from "enmap"
+import * as Url from "url"
 
 export async function sendToHubs(
   message: app.Message,
@@ -12,10 +13,11 @@ export async function sendToHubs(
     })
   )
 
+  const embed = glinkEmbedFrom(message, inviteLink)
+
   await Promise.all(
     channels.map((channel) => {
-      if (channel.isText())
-        return channel.send(glinkEmbedFrom(message, inviteLink))
+      if (channel.isText()) return channel.send(embed)
     })
   )
 
@@ -26,7 +28,7 @@ function glinkEmbedFrom(
   message: app.Message,
   inviteLink?: string
 ): app.MessageEmbed {
-  return new app.MessageEmbed()
+  const embed = new app.MessageEmbed()
     .setColor(message.member?.displayHexColor ?? "BLURPLE")
     .setAuthor(
       message.author.username,
@@ -35,13 +37,39 @@ function glinkEmbedFrom(
       }),
       inviteLink
     )
-    .setDescription(message.content)
     .setFooter(
       message.guild?.name,
       message.guild?.iconURL({ dynamic: true }) ??
         message.client.user?.displayAvatarURL({ dynamic: true })
     )
     .setTimestamp()
+
+  for (const word of message.content.split(/\s+/)) {
+    if (/^https?:\/\//i.test(word)) {
+      const url = new Url.URL(word)
+      url.search = ""
+      if (/\.(?:png|gif|jpe?g)$/i.test(url.href)) {
+        message.content = message.content.replace(word, "").trim()
+        if (!embed.image) embed.setImage(url.href)
+        else if (!embed.thumbnail) embed.setThumbnail(url.href)
+      }
+    }
+  }
+
+  if (message.attachments.size > 0) {
+    for (const [, attachment] of message.attachments) {
+      const url = new Url.URL(attachment.url)
+      url.search = ""
+      if (/\.(?:png|gif|jpe?g)$/i.test(url.href)) {
+        if (!embed.image) embed.setImage(url.href)
+        else if (!embed.thumbnail) embed.setThumbnail(url.href)
+      }
+    }
+  }
+
+  if (message.content) embed.setDescription(message.content)
+
+  return embed
 }
 
 export function getNetworkHubs(networkId: app.Snowflake) {
