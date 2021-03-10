@@ -13,14 +13,12 @@ const command: app.Command = {
           app
             .getNetworkHubs(message.author.id)
             .map((hub, id) => {
-              return `\`${id}\` ${
-                hub.inviteLink
-                  ? `[invitation link](${hub.inviteLink})`
-                  : "no invitation link"
-              } **${
+              const guildName =
                 (message.client.channels.cache.get(id) as app.GuildChannel)
                   ?.guild.name ?? "not a guild channel"
-              }**`
+              return `\`${id}\` ${
+                hub.inviteLink ? `[${guildName}](${hub.inviteLink})` : guildName
+              }`
             })
             .join("\n")
         )
