@@ -25,11 +25,78 @@ export async function sendToHubs(
   return message.delete()
 }
 
+export interface EmbedParams {
+  id: app.Snowflake
+  authorId: app.Snowflake
+}
+
+export function extractEmbedParams(href: string): EmbedParams {
+  const url = new Url.URL(href)
+  return {
+    id: url.searchParams.get("id") as string,
+    authorId: url.searchParams.get("author") as string,
+  }
+}
+
+export function compileEmbedParams(params: Omit<EmbedParams, "id">): string {
+  const url = new Url.URL("https://embed.data")
+  url.searchParams.append("id", app.SnowflakeUtil.generate())
+  url.searchParams.append("authorId", params.authorId)
+  return url.href
+}
+
+export async function deleteMessage(
+  target: app.Message,
+  actionAuthorId: app.Snowflake
+): Promise<unknown> {
+  if (target.embeds.length === 0 || !target.embeds[0].url)
+    return target.channel.send("Please target a valid chat message.")
+
+  const targetParams = app.extractEmbedParams(target.embeds[0].url)
+  const hub = app.hubs.get(target.channel.id) as app.Hub
+
+  if (
+    actionAuthorId !== hub.networkId &&
+    actionAuthorId !== targetParams.authorId
+  )
+    return target.channel.send("You don't have permission for this action.")
+
+  const hubs = getNetworkHubs(hub.networkId)
+
+  for (const [id] of hubs) {
+    let channel
+    try {
+      channel = await target.client.channels.fetch(id)
+    } catch (error) {
+      return removeHub.bind(target.client)(id)
+    }
+
+    if (channel.isText()) {
+      const messages = await channel.messages.fetch()
+
+      const message = messages.find((message) => {
+        if (message.embeds.length === 0 || !message.embeds[0].url) return false
+
+        const embedParams = app.extractEmbedParams(message.embeds[0].url)
+
+        return targetParams.id === embedParams.id
+      })
+
+      if (message) await message.delete().catch()
+    }
+  }
+}
+
 function glinkEmbedFrom(
   message: app.Message,
   inviteLink?: string
 ): app.MessageEmbed {
   const embed = new app.MessageEmbed()
+    .setURL(
+      compileEmbedParams({
+        authorId: message.author.id,
+      })
+    )
     .setColor(message.member?.displayHexColor ?? "BLURPLE")
     .setAuthor(
       message.author.username,
@@ -56,7 +123,7 @@ function glinkEmbedFrom(
 
   function findEmoji(name: string): app.GuildEmoji | undefined {
     const emojis = message.client.emojis.cache.array()
-    const { bestMatchIndex, bestMatch } = ss.findBestMatch(
+    const { bestMatchIndex } = ss.findBestMatch(
       name.toLowerCase(),
       emojis.map((emoji) => emoji.name.toLowerCase())
     )
@@ -153,11 +220,11 @@ export function removeNetwork(this: app.Client, networkId: app.Snowflake) {
 export function removeHub(
   this: app.Client,
   hubId: app.Snowflake,
-  reason: string
+  reason?: string
 ) {
   app.hubs.delete(hubId)
 
   const channel = this.channels.cache.get(hubId)
 
-  if (channel && channel.isText()) channel.send(reason).catch()
+  if (reason && channel && channel.isText()) channel.send(reason).catch()
 }
