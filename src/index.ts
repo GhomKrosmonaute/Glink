@@ -11,7 +11,10 @@ for (const key of ["TOKEN", "PREFIX", "OWNER"]) {
   }
 }
 
-const client = new Discord.Client()
+const client = new Discord.Client({
+  disableMentions: "everyone",
+  fetchAllMembers: true,
+})
 
 client.login(process.env.TOKEN).catch(() => {
   throw new Error("Invalid Discord token given.")
