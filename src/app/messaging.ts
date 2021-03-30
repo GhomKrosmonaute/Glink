@@ -8,21 +8,26 @@ export async function sendToHubs(
   hubs: Enmap<string, app.Hub>,
   inviteLink?: string
 ) {
-  const channels = await Promise.all(
-    hubs.map((hub, channelId) => {
-      return message.client.channels.fetch(channelId)
-    })
-  )
+  const channels: app.Channel[] = []
+
+  for (const channelId of hubs.keyArray()) {
+    try {
+      const channel = await message.client.channels.fetch(channelId)
+      channels.push(channel)
+    } catch (error) {
+      app.hubs.delete(channelId)
+    }
+  }
 
   const embed = glinkEmbedFrom(message, inviteLink)
 
-  await Promise.all(
+  await message.delete()
+
+  return Promise.all(
     channels.map((channel) => {
       if (channel.isText()) return channel.send(embed)
     })
   )
-
-  return message.delete()
 }
 
 export interface EmbedParams {
