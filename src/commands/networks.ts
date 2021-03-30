@@ -58,6 +58,7 @@ const command: app.Command = {
     {
       name: "remove",
       botOwner: true,
+      description: "Remove a network",
       async run(message) {
         return message.channel.send("not yet implemented.")
       },
