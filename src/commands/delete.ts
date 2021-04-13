@@ -15,6 +15,8 @@ const command: app.Command = {
     },
   ],
   async run(message) {
+    message.triggerCoolDown()
+
     await message.delete()
 
     return app.deleteMessage(message.args.target, message.author.id)

@@ -1,5 +1,5 @@
 import { join } from "path"
-import prettify from "ghom-prettify"
+import * as prettify from "ghom-prettify"
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
