@@ -4,17 +4,19 @@ import * as app from "../app"
 const command: app.Command = {
   name: "join",
   description: "Join a network, make current channel as hub",
-  guildOwner: true,
+  guildOwnerOnly: true,
   positional: [
     {
       name: "networkId",
+      description: "The resolvable network to join",
       checkValue: (value) => app.networks.has(value),
       required: true,
     },
   ],
-  args: [
+  options: [
     {
       name: "inviteLink",
+      description: "Joined guild url",
       aliases: ["invite", "link", "l", "invitation"],
       checkValue: (value) => {
         try {
@@ -27,13 +29,14 @@ const command: app.Command = {
     },
     {
       name: "password",
+      description: "The joined network password",
       checkValue: /.{5,64}/,
       aliases: ["pass", "pw"],
     },
   ],
   async run(message) {
     const hub: app.Hub = {
-      networkId: message.positional.networkId,
+      networkId: message.args.networkId,
       inviteLink: message.args.inviteLink ?? undefined,
     }
 

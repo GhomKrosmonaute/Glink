@@ -1,105 +1,31 @@
 import * as app from "../app"
 
-const command: app.CommandResolvable = () => ({
+const command: app.Command = {
   name: "help",
   aliases: ["h", "usage"],
   botPermissions: ["SEND_MESSAGES"],
   description: "Help menu",
   longDescription: "Display all commands of bot or detail a target command.",
-  examples: ["help", ...app.commands.map((cmd, key) => "help " + key)],
   positional: [
     {
       name: "command",
-      description: "The target command to detail.",
+      description: "The target command name.",
     },
   ],
   async run(message) {
-    const prefix = await app.prefix(message.guild)
+    const prefix = await app.prefix(message.guild ?? undefined)
 
-    if (message.positional.command) {
-      const cmd = app.commands.resolve(message.positional.command)
+    if (message.args.command) {
+      const cmd = app.commands.resolve(message.args.command)
 
       if (cmd) {
-        let pattern = prefix + cmd.name
-
-        if (cmd.positional) {
-          for (const positional of cmd.positional) {
-            const dft =
-              positional.default !== undefined
-                ? `="${await app.scrap(positional.default, message)}"`
-                : ""
-            pattern += positional.required
-              ? ` <${positional.name}${dft}>`
-              : ` [${positional.name}${dft}]`
-          }
-        }
-
-        if (cmd.args) {
-          for (const arg of cmd.args) {
-            if (arg.isFlag) {
-              pattern += ` [-${arg.flag ?? `-${arg.name}`}]`
-            } else {
-              const dft =
-                arg.default !== undefined
-                  ? `="${app.scrap(arg.default, message)}"`
-                  : ""
-              pattern += arg.required
-                ? ` <${arg.name}${dft}>`
-                : ` [${arg.name}${dft}]`
-            }
-          }
-        }
-
-        await message.channel.send(
-          new app.MessageEmbed()
-            .setColor("BLURPLE")
-            .setAuthor(
-              `Command: ${cmd.name}`,
-              message.client.user?.displayAvatarURL()
-            )
-            .setTitle(`aliases: ${cmd.aliases?.join(", ") ?? "none"}`)
-            .setDescription(
-              cmd.longDescription ?? cmd.description ?? "no description"
-            )
-            .addField(
-              "pattern",
-              app.CODE.stringify({ content: pattern }),
-              false
-            )
-            .addField(
-              "examples:",
-              app.CODE.stringify({
-                content:
-                  cmd.examples?.map((example) => prefix + example).join("\n") ??
-                  "none",
-              }),
-              false
-            )
-            .addField(
-              "needed permissions:",
-              `**Bot**: ${cmd.botPermissions?.join(", ") || "none"}\n` +
-                `**User**: ${cmd.userPermissions?.join(", ") || "none"}`,
-              true
-            )
-            .addField(
-              "sub commands:",
-              cmd.subs
-                ?.map((subResolvable) => {
-                  const sub = app.resolve(subResolvable)
-                  return `**${sub.name}**: ${
-                    sub.description ?? "no description"
-                  }`
-                })
-                .join("\n") || "none",
-              true
-            )
-        )
+        return app.sendCommandDetails(message, cmd, prefix)
       } else {
         await message.channel.send(
           new app.MessageEmbed()
             .setColor("RED")
             .setAuthor(
-              `Unknown command "${message.positional.command}"`,
+              `Unknown command "${message.args.command}"`,
               message.client.user?.displayAvatarURL()
             )
         )
@@ -107,12 +33,13 @@ const command: app.CommandResolvable = () => ({
     } else {
       new app.Paginator(
         app.Paginator.divider(
-          app.commands.map((resolvable) => {
-            const cmd = app.resolve(resolvable)
-            return `**${prefix}${cmd.name}** - ${
-              cmd.description ?? "no description"
-            }`
-          }),
+          await Promise.all(
+            app.commands.map(async (cmd) => {
+              return `**${prefix}${cmd.name}** - ${
+                (await app.scrap(cmd.description, message)) ?? "no description"
+              }`
+            })
+          ),
           10
         ).map((page) => {
           return new app.MessageEmbed()
@@ -126,31 +53,6 @@ const command: app.CommandResolvable = () => ({
       )
     }
   },
-  subs: [
-    {
-      name: "count",
-      examples: ["help count"],
-      async run(message) {
-        return message.channel.send(
-          new app.MessageEmbed()
-            .setColor("BLURPLE")
-            .setAuthor("Command count", message.client.user?.displayAvatarURL())
-            .setDescription(
-              `There are currently ${
-                app.commands.size
-              } commands and ${app.commands.reduce<number>(
-                (acc, resolvableCommand) => {
-                  const command = app.resolve(resolvableCommand)
-                  if (command && command.subs) return acc + command.subs.length
-                  return acc
-                },
-                0
-              )} sub-commands`
-            )
-        )
-      },
-    },
-  ],
-})
+}
 
 module.exports = command

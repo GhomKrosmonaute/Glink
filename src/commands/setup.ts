@@ -3,17 +3,19 @@ import * as app from "../app"
 const command: app.Command = {
   name: "setup",
   description: "Setup a new network",
-  guildOwner: true,
+  guildOwnerOnly: true,
   positional: [
     {
       name: "name",
+      description: "The own network name",
       required: true,
       checkValue: /.{3,50}/,
     },
   ],
-  args: [
+  options: [
     {
       name: "password",
+      description: "The own network password",
       aliases: ["pass", "pw"],
       checkValue: /.{5,64}/,
     },
@@ -21,7 +23,7 @@ const command: app.Command = {
   async run(message) {
     const network: app.Network = {
       password: message.args.password,
-      displayName: message.positional.name,
+      displayName: message.args.name,
     }
 
     app.networks.set(message.author.id, network)

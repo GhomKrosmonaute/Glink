@@ -3,6 +3,20 @@ import Enmap from "enmap"
 import ss from "string-similarity"
 import * as Url from "url"
 
+export const hubOnly: app.Middleware<app.CommandMessage> = (message) => {
+  return (
+    !app.hubs.has(message.channel.id) || "You must use this command in a hub."
+  )
+}
+
+export const networkOwnerOnly: app.Middleware<app.CommandMessage> = (
+  message
+) => {
+  return (
+    !app.networks.has(message.author.id) || "You must have setup a network."
+  )
+}
+
 export async function sendToHubs(
   message: app.Message,
   hubs: Enmap<string, app.Hub>,

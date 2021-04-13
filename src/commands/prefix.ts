@@ -1,8 +1,9 @@
 import * as app from "../app"
 
-const command: app.Command = {
+const command: app.Command<app.GuildMessage> = {
   name: "prefix",
-  guildOwner: true,
+  guildOwnerOnly: true,
+  guildChannelOnly: true,
   description: "Edit or show the bot prefix",
   positional: [
     {
@@ -12,7 +13,7 @@ const command: app.Command = {
     },
   ],
   async run(message) {
-    const prefix = message.positional.prefix
+    const prefix = message.args.prefix
 
     if (!prefix)
       return message.channel.send(

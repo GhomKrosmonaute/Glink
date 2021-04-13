@@ -2,7 +2,8 @@ import * as app from "../app"
 
 const command: app.Command = {
   name: "teardown",
-  networkOwner: true,
+  description: "Kill your own network",
+  middlewares: [app.networkOwnerOnly],
   aliases: ["down", "abort", "clean", "delete", "remove", "reset"],
   async run(message) {
     const network = app.networks.get(message.author.id) as app.Network

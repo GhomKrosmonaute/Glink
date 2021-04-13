@@ -6,11 +6,18 @@ const listener: app.Listener<"message"> = {
   async run(message) {
     if (!app.isCommandMessage(message)) return
 
-    const prefix = await app.prefix(message.guild)
+    const prefix = await app.prefix(message.guild ?? undefined)
 
-    if (message.content.startsWith(prefix)) {
-      message.content = message.content.slice(prefix.length)
-    } else if (!message.author.bot) {
+    const cut = function (key: string) {
+      message.content = message.content.slice(key.length).trim()
+    }
+
+    const mentionRegex = new RegExp(`^<@!?${message.client.user?.id}> `)
+
+    if (message.content.startsWith(prefix)) cut(prefix)
+    else if (mentionRegex.test(message.content))
+      cut(message.content.split(" ")[0])
+    else if (!message.author.bot) {
       // messaging
       const hub = app.hubs.get(message.channel.id)
       if (hub) {
@@ -28,9 +35,13 @@ const listener: app.Listener<"message"> = {
     }
 
     let key = message.content.split(/\s+/)[0]
-    let cmd = app.commands.resolve(key)
 
-    if (!cmd) return
+    // turn ON/OFF
+    if (key !== "turn" && !app.cache.ensure<boolean>("turn", true)) return
+
+    let cmd: app.Command = app.commands.resolve(key) as app.Command
+
+    if (!cmd) return null
 
     // check sub commands
     {
@@ -40,8 +51,7 @@ const listener: app.Listener<"message"> = {
       while (cmd.subs && cursor < cmd.subs.length) {
         const subKey = message.content.split(/\s+/)[depth + 1]
 
-        for (let sub of cmd.subs) {
-          sub = app.resolve(sub)
+        for (const sub of cmd.subs) {
           if (sub.name === subKey) {
             key += ` ${subKey}`
             cursor = 0
@@ -63,20 +73,42 @@ const listener: app.Listener<"message"> = {
       }
     }
 
-    // turn ON/OFF
-    if (key !== "turn" && !app.cache.ensure("turn", true)) return
+    cut(key)
+
+    // parse CommandMessage arguments
+    const parsedArgs = yargsParser(message.content)
+    const restPositional = parsedArgs._ ?? []
+
+    message.args = (parsedArgs._?.slice(0) ?? []).map((positional) => {
+      if (/^(?:".+"|'.+')$/.test(positional))
+        return positional.slice(1, positional.length - 1)
+      return positional
+    })
+
+    // handle help argument
+    if (parsedArgs.help || parsedArgs.h)
+      return app.sendCommandDetails(message, cmd, prefix)
 
     // coolDown
-    {
-      const coolDownId = `${cmd.name}:${message.channel.id}`
-      const coolDown = app.cache.ensure("CD-" + coolDownId, {
+    if (cmd.coolDown) {
+      const slug = app.slug("coolDown", cmd.name, message.channel.id)
+      const coolDown = app.cache.ensure<app.CoolDown>(slug, {
         time: 0,
         trigger: false,
       })
 
-      if (cmd.coolDown && coolDown.trigger) {
-        if (Date.now() > coolDown.time + cmd.coolDown) {
-          app.cache.set("CD-" + coolDownId, {
+      message.triggerCoolDown = () => {
+        app.cache.set(slug, {
+          time: Date.now(),
+          trigger: true,
+        })
+      }
+
+      if (coolDown.trigger) {
+        const coolDownTime = await app.scrap(cmd.coolDown, message)
+
+        if (Date.now() > coolDown.time + coolDownTime) {
+          app.cache.set(slug, {
             time: 0,
             trigger: false,
           })
@@ -86,17 +118,102 @@ const listener: app.Listener<"message"> = {
               .setColor("RED")
               .setAuthor(
                 `Please wait ${Math.ceil(
-                  (coolDown.time + cmd.coolDown - Date.now()) / 1000
+                  (coolDown.time + coolDownTime - Date.now()) / 1000
                 )} seconds...`,
                 message.client.user?.displayAvatarURL()
               )
           )
         }
       }
+    } else {
+      message.triggerCoolDown = () => {
+        app.warn(
+          `You must setup the cooldown of the "${cmd.name}" command before using the "triggerCoolDown" method`,
+          "system"
+        )
+      }
     }
 
-    if (cmd.botOwner)
-      if (process.env.OWNER !== message.member.id)
+    if (app.isGuildMessage(message)) {
+      if (cmd.dmChannelOnly)
+        return message.channel.send(
+          new app.MessageEmbed()
+            .setColor("RED")
+            .setAuthor(
+              "This command must be used in DM.",
+              message.client.user?.displayAvatarURL()
+            )
+        )
+
+      if (cmd.guildOwnerOnly)
+        if (
+          message.guild.owner !== message.member &&
+          process.env.OWNER !== message.member.id
+        )
+          return await message.channel.send(
+            new app.MessageEmbed()
+              .setColor("RED")
+              .setAuthor(
+                "You must be the guild owner.",
+                message.client.user?.displayAvatarURL()
+              )
+          )
+
+      if (cmd.botPermissions) {
+        const botPermissions = await app.scrap(cmd.botPermissions, message)
+
+        for (const permission of botPermissions)
+          if (
+            !message.guild.me?.hasPermission(permission, {
+              checkAdmin: true,
+              checkOwner: true,
+            })
+          )
+            return await message.channel.send(
+              new app.MessageEmbed()
+                .setColor("RED")
+                .setAuthor(
+                  `I need the \`${permission}\` permission to call this command.`,
+                  message.client.user?.displayAvatarURL()
+                )
+            )
+      }
+
+      if (cmd.userPermissions) {
+        const userPermissions = await app.scrap(cmd.userPermissions, message)
+
+        for (const permission of userPermissions)
+          if (
+            !message.member.hasPermission(permission, {
+              checkAdmin: true,
+              checkOwner: true,
+            })
+          )
+            return await message.channel.send(
+              new app.MessageEmbed()
+                .setColor("RED")
+                .setAuthor(
+                  `You need the \`${permission}\` permission to call this command.`,
+                  message.client.user?.displayAvatarURL()
+                )
+            )
+      }
+    }
+
+    if (await app.scrap(cmd.guildChannelOnly, message)) {
+      if (app.isDirectMessage(message))
+        return await message.channel.send(
+          new app.MessageEmbed()
+            .setColor("RED")
+            .setAuthor(
+              "This command must be used in a guild.",
+              message.client.user?.displayAvatarURL()
+            )
+        )
+    }
+
+    if (await app.scrap(cmd.botOwnerOnly, message))
+      if (process.env.OWNER !== message.author.id)
         return await message.channel.send(
           new app.MessageEmbed()
             .setColor("RED")
@@ -106,112 +223,39 @@ const listener: app.Listener<"message"> = {
             )
         )
 
-    if (cmd.guildOwner)
-      if (
-        message.guild.owner !== message.member &&
-        process.env.OWNER !== message.member.id
-      )
-        return await message.channel.send(
-          new app.MessageEmbed()
-            .setColor("RED")
-            .setAuthor(
-              "You must be the guild owner.",
-              message.client.user?.displayAvatarURL()
-            )
-        )
+    if (cmd.middlewares) {
+      const middlewares = await app.scrap(cmd.middlewares, message)
 
-    if (cmd.networkOwner)
-      if (!app.networks.has(message.author.id))
-        return await message.channel.send(
-          new app.MessageEmbed()
-            .setColor("RED")
-            .setAuthor(
-              "You must have setup a network.",
-              message.client.user?.displayAvatarURL()
-            )
-        )
+      for (const middleware of middlewares) {
+        const result: string | boolean = await middleware(message)
 
-    if (cmd.hubOnly)
-      if (!app.hubs.has(message.channel.id))
-        return await message.channel.send(
-          new app.MessageEmbed()
-            .setColor("RED")
-            .setAuthor(
-              "You must use this command in a hub.",
-              message.client.user?.displayAvatarURL()
-            )
-        )
-
-    if (cmd.botPermissions)
-      for (const permission of cmd.botPermissions)
-        if (
-          !message.guild.me?.hasPermission(permission, {
-            checkAdmin: true,
-            checkOwner: true,
-          })
-        )
+        if (typeof result === "string")
           return await message.channel.send(
             new app.MessageEmbed()
               .setColor("RED")
-              .setAuthor(
-                `I need the \`${permission}\` permission to call this command.`,
-                message.client.user?.displayAvatarURL()
-              )
+              .setAuthor(result, message.client.user?.displayAvatarURL())
           )
-
-    if (cmd.userPermissions)
-      for (const permission of cmd.userPermissions)
-        if (
-          !message.member.hasPermission(permission, {
-            checkAdmin: true,
-            checkOwner: true,
-          })
-        )
-          return await message.channel.send(
-            new app.MessageEmbed()
-              .setColor("RED")
-              .setAuthor(
-                `You need the \`${permission}\` permission to call this command.`,
-                message.client.user?.displayAvatarURL()
-              )
-          )
-
-    // parse CommandMessage arguments
-    {
-      message.content = message.content.slice(key.length).trim()
-      message.args = yargsParser(message.content) as app.CommandMessage["args"]
-      message.rest = message.args._?.join(" ") ?? ""
-      message.positional = (message.args._?.slice(0) ?? []).map(
-        (positional) => {
-          if (/^(?:".+"|'.+')$/.test(positional))
-            return positional.slice(1, positional.length - 1)
-          return positional
-        }
-      )
+      }
     }
 
     if (cmd.positional) {
-      for (const positional of cmd.positional) {
-        const index = cmd.positional.indexOf(positional)
+      const positionalList = await app.scrap(cmd.positional, message)
 
-        const getValue = () => message.positional[positional.name]
-        const setValue = (value: any) => {
-          message.positional[positional.name] = value
-          message.positional[index] = value
+      for (const positional of positionalList) {
+        const index = positionalList.indexOf(positional)
+        let value = parsedArgs._[index]
+        const given = value !== undefined
+
+        const set = (v: any) => {
+          message.args[positional.name] = v
+          message.args[index] = v
+          value = v
         }
 
-        const given = message.positional[index] !== undefined
-
-        message.positional[positional.name] = message.positional[index]
+        set(value)
 
         if (!given) {
-          if (positional.default !== undefined) {
-            setValue(
-              typeof positional.default === "function"
-                ? await positional.default(message)
-                : positional.default
-            )
-          } else if (positional.required) {
+          if (await app.scrap(positional.required, message)) {
             return await message.channel.send(
               new app.MessageEmbed()
                 .setColor("RED")
@@ -222,15 +266,23 @@ const listener: app.Listener<"message"> = {
                 .setDescription(
                   positional.description
                     ? "Description: " + positional.description
-                    : `Example: \`--${positional.name}=someValue\``
+                    : `Run the following command to learn more: ${app.code.stringify(
+                        {
+                          content: `${key} --help`,
+                        }
+                      )}`
                 )
             )
+          } else if (positional.default !== undefined) {
+            set(await app.scrap(positional.default, message))
+          } else {
+            set(null)
           }
         } else if (positional.checkValue) {
           const checked = await app.checkValue(
             positional,
             "positional",
-            getValue(),
+            value,
             message
           )
 
@@ -241,119 +293,142 @@ const listener: app.Listener<"message"> = {
           const casted = await app.castValue(
             positional,
             "positional",
-            getValue(),
+            value,
             message,
-            setValue
+            set
           )
 
           if (!casted) return
         }
 
-        message.rest = message.rest
-          .replace(message.args._?.[index] ?? "", "")
-          .trim()
+        restPositional.shift()
       }
     }
 
-    if (cmd.args) {
-      for (const arg of cmd.args) {
-        const value = () => message.args[arg.name]
+    if (cmd.options) {
+      const options = await app.scrap(cmd.options, message)
 
-        let usedName = arg.name
-        let given = message.args.hasOwnProperty(arg.name)
+      for (const option of options) {
+        let { given, value } = app.resolveGivenArgument(parsedArgs, option)
 
-        if (!given && arg.aliases) {
-          if (typeof arg.aliases === "string") {
-            usedName = arg.aliases
-            given = message.args.hasOwnProperty(arg.aliases)
-          } else {
-            for (const alias of arg.aliases) {
-              if (message.args.hasOwnProperty(alias)) {
-                usedName = alias
-                given = true
-                break
-              }
-            }
-          }
+        const set = (v: any) => {
+          message.args[option.name] = v
+          value = v
         }
 
-        if (!given && arg.isFlag && arg.flag) {
-          usedName = arg.flag
-          given = message.args.hasOwnProperty(arg.flag)
-        }
+        if (value === true) value = undefined
 
-        if (arg.required && !given)
+        if ((await app.scrap(option.required, message)) && !given)
           return await message.channel.send(
             new app.MessageEmbed()
               .setColor("RED")
               .setAuthor(
-                `Missing argument "${arg.name}"`,
+                `Missing argument "${option.name}"`,
                 message.client.user?.displayAvatarURL()
               )
               .setDescription(
-                arg.description
-                  ? "Description: " + arg.description
-                  : `Example: \`--${arg.name}=someValue\``
+                option.description
+                  ? "Description: " + option.description
+                  : `Example: \`--${option.name}=someValue\``
               )
           )
 
-        if (arg.isFlag)
-          message.args[arg.name] = message.args.hasOwnProperty(usedName)
-        else {
-          message.args[arg.name] = message.args[usedName]
+        set(value)
 
-          if (value() === undefined) {
-            if (arg.default !== undefined) {
-              message.args[arg.name] =
-                typeof arg.default === "function"
-                  ? await arg.default(message)
-                  : arg.default
-            } else if (arg.castValue !== "array") {
-              message.args[arg.name] = null
-            }
-          } else if (arg.checkValue) {
-            const checked = await app.checkValue(
-              arg,
-              "argument",
-              value(),
-              message
-            )
-
-            if (!checked) return
+        if (value === undefined) {
+          if (option.default !== undefined) {
+            set(await app.scrap(option.default, message))
+          } else if (option.castValue !== "array") {
+            set(null)
           }
+        } else if (option.checkValue) {
+          const checked = await app.checkValue(
+            option,
+            "argument",
+            value,
+            message
+          )
 
-          if (value() !== null && arg.castValue) {
-            const casted = await app.castValue(
-              arg,
-              "argument",
-              value(),
-              message,
-              (value) => (message.args[arg.name] = value)
-            )
+          if (!checked) return
+        }
 
-            if (!casted) return
-          }
+        if (value !== null && option.castValue) {
+          const casted = await app.castValue(
+            option,
+            "argument",
+            value,
+            message,
+            set
+          )
+
+          if (!casted) return
         }
       }
     }
 
-    if (cmd.loading) message.channel.startTyping().catch()
+    if (cmd.flags) {
+      for (const flag of cmd.flags) {
+        let { given, value } = app.resolveGivenArgument(parsedArgs, flag)
 
-    delete message.args._
+        const set = (v: boolean) => {
+          message.args[flag.name] = v
+          value = v
+        }
+
+        if (!given) set(false)
+        else if (typeof value === "boolean") set(value)
+        else if (/^(?:true|1|on|yes|oui)$/.test(value)) set(true)
+        else if (/^(?:false|0|off|no|non)$/.test(value)) set(false)
+        else {
+          set(true)
+          restPositional.unshift(value)
+        }
+      }
+    }
+
+    message.rest = restPositional.join(" ")
+
+    if (cmd.rest) {
+      const rest = await app.scrap(cmd.rest, message)
+
+      if (message.rest.length === 0) {
+        if (await app.scrap(rest.required, message)) {
+          return await message.channel.send(
+            new app.MessageEmbed()
+              .setColor("RED")
+              .setAuthor(
+                `Missing rest "${rest.name}"`,
+                message.client.user?.displayAvatarURL()
+              )
+              .setDescription(
+                rest.description ??
+                  "Please use `--help` flag for more information."
+              )
+          )
+        } else if (rest.default) {
+          message.args[rest.name] = await app.scrap(rest.default, message)
+        }
+      } else {
+        message.args[rest.name] = message.rest
+      }
+    }
 
     try {
       await cmd.run(message)
     } catch (error) {
+      app.error(error, "handler", true)
       message.channel
         .send(
-          app.CODE.stringify({
+          app.code.stringify({
             content: `Error: ${
               error.message?.replace(/\x1b\[\d+m/g, "") ?? "unknown"
             }`,
             lang: "js",
           })
         )
-        .catch(console.error)
+        .catch((error) => {
+          app.error(error, "system")
+        })
     }
   },
 }

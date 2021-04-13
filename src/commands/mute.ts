@@ -2,37 +2,39 @@ import * as app from "../app"
 
 const command: app.Command = {
   name: "mute",
-  networkOwner: true,
+  description: "Mute an user from own network",
+  middlewares: [app.networkOwnerOnly],
   positional: [
     {
-      name: "userId",
+      name: "user",
+      description: "The use to mute",
+      castValue: "user",
       required: true,
     },
   ],
-  args: [
+  options: [
     {
       name: "reason",
+      description: "Reason of mute",
       aliases: ["m", "message"],
     },
   ],
   async run(message) {
-    const user = message.client.users.cache.get(message.positional.userId)
-
-    if (!user) return message.channel.send("This user do not exists.")
-
     const mutes = app.mutes.ensure(message.author.id, [])
 
     app.mutes.set(message.author.id, [
       ...mutes,
       {
-        userId: user.id,
+        userId: message.args.user.id,
         reason: message.args.reason ?? undefined,
         date: Date.now(),
       },
     ])
 
     return message.channel.send(
-      `You have successfully muted **${user.username}** from the "**${
+      `You have successfully muted **${
+        message.args.user.username
+      }** from the "**${
         app.networks.get(message.author.id)?.displayName
       }**" network.`
     )
@@ -41,7 +43,8 @@ const command: app.Command = {
     {
       name: "list",
       aliases: ["ls"],
-      networkOwner: true,
+      description: "List muted users",
+      middlewares: [app.networkOwnerOnly],
       async run(message) {
         new app.Paginator(
           app.Paginator.divider(

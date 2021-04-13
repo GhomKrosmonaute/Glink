@@ -3,8 +3,8 @@ import * as app from "../app"
 const command: app.Command = {
   name: "leave",
   aliases: ["exit", "quit"],
-  guildOwner: true,
-  hubOnly: true,
+  guildOwnerOnly: true,
+  middlewares: [app.hubOnly],
   description: "Leave a network, remove hub",
   async run(message) {
     app.removeHub.bind(message.client)(

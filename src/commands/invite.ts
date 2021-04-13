@@ -2,6 +2,7 @@ import * as app from "../app"
 
 const command: app.Command = {
   name: "invite",
+  description: "Get invite link of Glink",
   async run(message) {
     return message.channel.send(
       new app.MessageEmbed()

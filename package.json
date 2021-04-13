@@ -26,12 +26,14 @@
     "@types/yargs-parser": "^20.2.0",
     "chalk": "^4.1.0",
     "dayjs": "^1.10.4",
-    "discord-eval.ts": "^1.0.14",
     "discord.js": "^12.4.1",
     "dotenv": "^8.2.0",
     "enmap": "latest",
+    "ghom-eval": "^1.0.2",
+    "ghom-prettify": "^2.0.1",
     "regex-parser": "^2.2.11",
     "string-similarity": "^4.0.4",
+    "tims": "^2.0.4",
     "yargs-parser": "^20.2.4"
   },
   "devDependencies": {
@@ -39,7 +41,7 @@
     "@types/node": "^14.14.6",
     "@types/string-similarity": "^4.0.0",
     "@types/ws": "^7.2.9",
-    "make-bot.ts": "^1.2.6",
+    "make-bot.ts": "^1.4.13",
     "prettier": "^2.1.2",
     "tsc-watch": "^4.2.9",
     "typescript": "^4.0.5"

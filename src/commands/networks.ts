@@ -7,7 +7,7 @@ const command: app.Command = {
   async run(message) {
     return message.channel.send(
       "Type `" +
-        (await app.prefix(message.guild)) +
+        (await app.prefix(message.guild ?? undefined)) +
         "help networks` for usage detail."
     )
   },
@@ -57,7 +57,7 @@ const command: app.Command = {
     },
     {
       name: "remove",
-      botOwner: true,
+      botOwnerOnly: true,
       description: "Remove a network",
       async run(message) {
         return message.channel.send("not yet implemented.")

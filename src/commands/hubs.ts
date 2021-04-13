@@ -2,8 +2,9 @@ import * as app from "../app"
 
 const command: app.Command = {
   name: "hubs",
+  description: "List owned hubs",
   aliases: ["hub", "net"],
-  networkOwner: true,
+  middlewares: [app.networkOwnerOnly],
   async run(message) {
     const network = app.networks.get(message.author.id) as app.Network
     return message.channel.send(
@@ -27,16 +28,19 @@ const command: app.Command = {
   subs: [
     {
       name: "remove",
+      description: "Remove a owned hub",
       aliases: ["rm"],
       positional: [
         {
-          name: "hubId",
+          name: "hub",
+          description: "The hub to remove",
+          castValue: "channel",
           required: true,
         },
       ],
-      networkOwner: true,
+      middlewares: [app.networkOwnerOnly],
       async run(message) {
-        const { hubId } = message.positional
+        const { id: hubId } = message.args.channel
 
         const hub = app.hubs.get(hubId)
         const network = app.networks.get(message.author.id) as app.Network
