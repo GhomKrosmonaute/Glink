@@ -15,26 +15,27 @@ const command: app.Command = {
   async run(message) {
     message.triggerCoolDown()
 
-    const toEdit = await message.channel.send("The process is running...")
+    const toEdit = await message.channel.send(
+      new app.MessageEmbed().setTitle("The process is running...")
+    )
 
-    cp.exec(message.args.cmd, { cwd: process.cwd() }, (err, stdout, stderr) => {
-      if (err) {
-        const errorMessage = `\\❌ An error has occurred. ${app.code.stringify({
-          content:
-            (err.stack ?? err.message ?? stderr).slice(0, 2000) || "No log",
-        })}`
+    cp.exec(message.rest, { cwd: process.cwd() }, (err, stdout, stderr) => {
+      const embed = new app.MessageEmbed()
+        .setTitle(
+          err ? "\\❌ An error has occurred." : "\\✔ Successfully executed."
+        )
+        .setDescription(
+          app.code.stringify({
+            content:
+              (err ? err.stack ?? err.message ?? stderr : stdout).slice(
+                0,
+                2000
+              ) || "No log",
+          })
+        )
 
-        return toEdit.edit(errorMessage).catch(() => {
-          message.channel.send(errorMessage).catch()
-        })
-      }
-
-      const successMessage = `\\✔ Successfully executed. ${app.code.stringify({
-        content: stdout.slice(0, 2000) || "No log",
-      })}`
-
-      toEdit.edit(successMessage).catch(() => {
-        message.channel.send(successMessage).catch()
+      toEdit.edit(embed).catch(() => {
+        message.channel.send(embed).catch()
       })
     })
   },

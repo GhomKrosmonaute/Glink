@@ -1,35 +1,44 @@
 import * as app from "../app"
-import Enmap from "enmap"
-import ss from "string-similarity"
 import * as Url from "url"
+import ss from "string-similarity"
 
-export const hubOnly: app.Middleware<app.CommandMessage> = (message) => {
+import hubsData, { Hub } from "../tables/hubs"
+import networksData, { Network } from "../tables/networks"
+import networks from "../tables/networks"
+
+export const hubOnly: app.Middleware<app.CommandMessage> = async (message) => {
   return (
-    !app.hubs.has(message.channel.id) || "You must use this command in a hub."
+    !!(await hubsData.query
+      .select()
+      .where("channelId", message.channel.id)
+      .first()) || "You must use this command in a hub."
   )
 }
 
-export const networkOwnerOnly: app.Middleware<app.CommandMessage> = (
+export const networkOwnerOnly: app.Middleware<app.CommandMessage> = async (
   message
 ) => {
   return (
-    !app.networks.has(message.author.id) || "You must have setup a network."
+    !!(await networksData.query
+      .select()
+      .where("ownerId", message.author.id)
+      .first()) || "You must have setup a network."
   )
 }
 
 export async function sendToHubs(
   message: app.Message,
-  hubs: Enmap<string, app.Hub>,
+  hubs: Hub[],
   inviteLink?: string
 ): Promise<unknown> {
   const channels: app.Channel[] = []
 
-  for (const channelId of hubs.keyArray()) {
+  for (const hub of hubs) {
     try {
-      const channel = await message.client.channels.fetch(channelId)
+      const channel = await message.client.channels.fetch(hub.channelId)
       channels.push(channel)
     } catch (error) {
-      app.hubs.delete(channelId)
+      await hubsData.query.delete().where("channelId", hub.channelId)
     }
   }
 
@@ -81,22 +90,38 @@ export async function deleteMessage(
     return target.channel.send("Please target a valid chat message.")
 
   const targetParams = app.extractEmbedParams(target.embeds[0].url)
-  const hub = app.hubs.get(target.channel.id) as app.Hub
+  const hub = await hubsData.query
+    .select()
+    .where("channelId", target.channel.id)
+    .first()
+
+  if (!hub) return target.channel.send("This channel is not a hub.")
+
+  const network = await networksData.query
+    .select()
+    .where("id", hub.networkId)
+    .first()
+
+  if (!network)
+    return removeHub.bind(target.client)(
+      hub.channelId,
+      "The network of this hub has been deleted."
+    )
 
   if (
-    actionAuthorId !== hub.networkId &&
+    actionAuthorId !== network.ownerId &&
     actionAuthorId !== targetParams.authorId
   )
     return target.channel.send("You don't have permission for this action.")
 
-  const hubs = getNetworkHubs(hub.networkId)
+  const hubs = await getNetworkHubs(network.id)
 
-  for (const [id] of hubs) {
+  for (const hub of hubs) {
     let channel
     try {
-      channel = await target.client.channels.fetch(id)
+      channel = await target.client.channels.fetch(hub.channelId)
     } catch (error) {
-      return removeHub.bind(target.client)(id)
+      return removeHub.bind(target.client)(hub.channelId)
     }
 
     if (channel.isText()) {
@@ -226,33 +251,43 @@ function glinkEmbedFrom(
   return embed
 }
 
-export function getNetworkHubs(networkId: app.Snowflake) {
-  return app.hubs.filter((hub) => {
-    return hub.networkId === networkId
-  })
+export function getNetworkHubs(networkId: number) {
+  return hubsData.query
+    .select()
+    .where("networkId", networkId)
+    .then((r) => r)
 }
 
-export function removeNetwork(this: app.Client, networkId: app.Snowflake) {
-  const network = app.networks.get(networkId)
+export async function removeNetwork(
+  this: app.Client,
+  networkId: app.Snowflake
+) {
+  const network = await networksData.query
+    .select()
+    .where("id", networkId)
+    .first()
 
   if (!network) return
 
   const reason = `The "**${network.displayName}**" network was removed.`
 
-  getNetworkHubs(networkId).forEach((hub, id) => {
-    removeHub.bind(this)(id, reason)
-  })
-  app.networks.delete(networkId)
+  const hubs = await getNetworkHubs(network.id)
+
+  for (const hub of hubs) {
+    await removeHub.bind(this)(hub.channelId, reason)
+  }
+
+  await networksData.query.delete().where("id", network.id)
 }
 
-export function removeHub(
+export async function removeHub(
   this: app.Client,
-  hubId: app.Snowflake,
+  channelId: app.Snowflake,
   reason?: string
 ) {
-  app.hubs.delete(hubId)
+  await hubsData.query.delete().where("channelId", channelId)
 
-  const channel = this.channels.cache.get(hubId)
+  const channel = this.channels.cache.get(channelId)
 
   if (reason && channel && channel.isText()) channel.send(reason).catch()
 }

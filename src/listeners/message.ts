@@ -1,10 +1,21 @@
 import * as app from "../app"
 import yargsParser from "yargs-parser"
 
+import hubs from "../tables/hubs"
+import mutes from "../tables/mutes"
+
 const listener: app.Listener<"message"> = {
   event: "message",
   async run(message) {
     if (!app.isCommandMessage(message)) return
+
+    app.emitMessage(message.channel, message)
+    app.emitMessage(message.author, message)
+
+    if (app.isGuildMessage(message)) {
+      app.emitMessage(message.guild, message)
+      app.emitMessage(message.member, message)
+    }
 
     const prefix = await app.prefix(message.guild ?? undefined)
 
@@ -12,24 +23,30 @@ const listener: app.Listener<"message"> = {
       message.content = message.content.slice(key.length).trim()
     }
 
-    const mentionRegex = new RegExp(`^<@!?${message.client.user?.id}> `)
+    const mentionRegex = new RegExp(`^<@!?${message.client.user?.id}> ?`)
 
     if (message.content.startsWith(prefix)) cut(prefix)
     else if (mentionRegex.test(message.content))
       cut(message.content.split(" ")[0])
     else if (!message.author.bot) {
       // messaging
-      const hub = app.hubs.get(message.channel.id)
+      const hub = await hubs.query
+        .select()
+        .where("channelId", message.channel.id)
+        .first()
       if (hub) {
-        const mutes = app.mutes.ensure(hub.networkId, [])
+        const networkMutes = await mutes.query
+          .select()
+          .where("networkId", hub.networkId)
 
-        if (mutes.some((mute) => mute.userId === message.author.id))
+        if (networkMutes.some((mute) => mute.userId === message.author.id))
           return message.delete()
 
-        const hubs = app.hubs.filter((_hub) => {
-          return hub.networkId === _hub.networkId
-        })
-        await app.sendToHubs(message, hubs, hub.inviteLink)
+        const networkHubs = await hubs.query
+          .select()
+          .where("networkId", hub.networkId)
+
+        await app.sendToHubs(message, networkHubs, hub.inviteLink)
       }
       return
     }
@@ -41,7 +58,11 @@ const listener: app.Listener<"message"> = {
 
     let cmd: app.Command = app.commands.resolve(key) as app.Command
 
-    if (!cmd) return null
+    if (!cmd) {
+      if (app.defaultCommand) {
+        cmd = app.defaultCommand
+      } else return null
+    }
 
     // check sub commands
     {
@@ -135,7 +156,7 @@ const listener: app.Listener<"message"> = {
     }
 
     if (app.isGuildMessage(message)) {
-      if (cmd.dmChannelOnly)
+      if (app.scrap(cmd.dmChannelOnly, message))
         return message.channel.send(
           new app.MessageEmbed()
             .setColor("RED")
@@ -145,7 +166,7 @@ const listener: app.Listener<"message"> = {
             )
         )
 
-      if (cmd.guildOwnerOnly)
+      if (app.scrap(cmd.guildOwnerOnly, message))
         if (
           message.guild.owner !== message.member &&
           process.env.OWNER !== message.member.id
