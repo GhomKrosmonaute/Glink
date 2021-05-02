@@ -1,9 +1,10 @@
 import * as app from "../app"
 
+import networks from "../tables/networks"
+
 const command: app.Command = {
   name: "setup",
   description: "Setup a new network",
-  guildOwnerOnly: true,
   positional: [
     {
       name: "name",
@@ -21,15 +22,17 @@ const command: app.Command = {
     },
   ],
   async run(message) {
-    const network: app.Network = {
-      password: message.args.password,
-      displayName: message.args.name,
-    }
-
-    app.networks.set(message.author.id, network)
+    await networks.query
+      .insert({
+        ownerId: message.author.id,
+        password: message.args.password,
+        displayName: message.args.name,
+      })
+      .onConflict("ownerId")
+      .merge()
 
     return message.channel.send(
-      `The "**${network.displayName}**" network successful created. \`ID:${message.author.id}\``
+      `The "**${message.args.name}**" network successful created. \`ID:${message.author.id}\``
     )
   },
 }

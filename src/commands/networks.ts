@@ -1,5 +1,7 @@
 import * as app from "../app"
 
+import networks from "../tables/networks"
+
 const command: app.Command = {
   name: "networks",
   description: "Networks manager",
@@ -14,42 +16,53 @@ const command: app.Command = {
   subs: [
     {
       name: "list",
+      aliases: ["ls"],
       description: "List networks",
       async run(message) {
         new app.Paginator(
-          app.Paginator.divider([...app.networks.entries()], 10).map((page) => {
-            return new app.MessageEmbed()
-              .setTitle("Networks list")
-              .setDescription(
-                page
-                  .map(([networkId, network]) => {
-                    const networkUsers = new Set(
-                      app
-                        .getNetworkHubs(networkId)
-                        .map((hub, hubId) => {
-                          const channel = message.client.channels.cache.get(
-                            hubId
-                          ) as app.GuildChannel
-                          return channel.guild.members.cache
-                            .filter(({ user }) => !user.bot)
-                            .map((member) => member.id)
-                        })
-                        .flat()
-                    )
+          await Promise.all(
+            app.Paginator.divider(await networks.query.select(), 10).map(
+              async (page) => {
+                return new app.MessageEmbed()
+                  .setTitle("Networks list")
+                  .setDescription(
+                    await Promise.all(
+                      page
+                        .map(async (network) => {
+                          const networkUsers = new Set(
+                            (await app.getNetworkHubs(network.id))
+                              .map((hub) => {
+                                const channel = message.client.channels.cache.get(
+                                  hub.channelId
+                                )
+                                if (
+                                  !channel ||
+                                  !(channel instanceof app.GuildChannel)
+                                )
+                                  return []
+                                return channel.guild.members.cache
+                                  .filter(({ user }) => !user.bot)
+                                  .map((member) => member.id)
+                              })
+                              .flat()
+                          )
 
-                    return `\`${app.resizeText(
-                      network.displayName,
-                      20,
-                      true
-                    )}\` - [ ${
-                      networkUsers.size
-                    } 👤 ] - owner: ${message.client.users.cache.get(
-                      networkId
-                    )}`
-                  })
-                  .join("\n")
-              )
-          }),
+                          return `\`${app.forceTextSize(
+                            network.displayName,
+                            20,
+                            true
+                          )}\` - [ ${
+                            networkUsers.size
+                          } 👤 ] - owner: ${message.client.users.cache.get(
+                            network.ownerId
+                          )}`
+                        })
+                        .join("\n")
+                    )
+                  )
+              }
+            )
+          ),
           message.channel,
           (reaction, user) => user.id === message.author.id
         )
@@ -59,6 +72,7 @@ const command: app.Command = {
       name: "remove",
       botOwnerOnly: true,
       description: "Remove a network",
+      aliases: ["rm", "delete", "del"],
       async run(message) {
         return message.channel.send("not yet implemented.")
       },

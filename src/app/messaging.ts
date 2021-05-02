@@ -4,7 +4,6 @@ import ss from "string-similarity"
 
 import hubsData, { Hub } from "../tables/hubs"
 import networksData, { Network } from "../tables/networks"
-import networks from "../tables/networks"
 
 export const hubOnly: app.Middleware<app.CommandMessage> = async (message) => {
   return (

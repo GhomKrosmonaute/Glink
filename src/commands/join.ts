@@ -1,15 +1,18 @@
 import { URL } from "url"
 import * as app from "../app"
 
+import networks from "../tables/networks"
+import hubs, { Hub } from "../tables/hubs"
+
 const command: app.Command = {
   name: "join",
   description: "Join a network, make current channel as hub",
+  guildChannelOnly: true,
   guildOwnerOnly: true,
   positional: [
     {
-      name: "networkId",
+      name: "networkOwnerId",
       description: "The resolvable network to join",
-      checkValue: (value) => app.networks.has(value),
       required: true,
     },
   ],
@@ -17,7 +20,7 @@ const command: app.Command = {
     {
       name: "inviteLink",
       description: "Joined guild url",
-      aliases: ["invite", "link", "l", "invitation"],
+      aliases: ["invite", "link", "l", "invitation", "url"],
       checkValue: (value) => {
         try {
           const url = new URL(value)
@@ -35,23 +38,29 @@ const command: app.Command = {
     },
   ],
   async run(message) {
-    const hub: app.Hub = {
-      networkId: message.args.networkId,
+    const network = await networks.query
+      .select()
+      .where("ownerId", message.args.networkOwnerId)
+      .first()
+
+    if (!network) return message.channel.send("This network don't exists.")
+
+    if ((await app.getNetworkHubs(network.id)).length > 9)
+      return message.channel.send("This network has too many hubs... (max 10)")
+
+    if (network.password && network.password !== message.args.password)
+      return message.channel.send(`Incorrect password!`)
+
+    const hub: Hub = {
+      channelId: message.channel.id,
+      networkId: network.id,
       inviteLink: message.args.inviteLink ?? undefined,
     }
 
-    if (app.getNetworkHubs(hub.networkId).size > 9)
-      return message.channel.send("This network has too many hubs... (max 10)")
-
-    const network = app.networks.get(hub.networkId)
-
-    if (network?.password && network.password !== message.args.password)
-      return message.channel.send(`Incorrect password!`)
-
-    app.hubs.set(message.channel.id, hub)
+    await hubs.query.insert(hub)
 
     return message.channel.send(
-      `You have successfully joined the "**${network?.displayName}**" network`
+      `You have successfully joined the "**${network.displayName}**" network`
     )
   },
 }

@@ -1,11 +1,13 @@
 import * as app from "../app"
 
-const table = new app.Table<{
+export interface Mute {
   networkId: number
   userId: app.Snowflake
   reason?: string
   date: number
-}>({
+}
+
+const table = new app.Table<Mute>({
   name: "mutes",
   setup: (table) => {
     table
