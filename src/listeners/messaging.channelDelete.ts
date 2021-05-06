@@ -1,9 +1,11 @@
 import * as app from "../app"
 
+import hubs from "../tables/hubs"
+
 const listener: app.Listener<"channelDelete"> = {
   event: "channelDelete",
   async run(channel) {
-    app.hubs.delete(channel.id)
+    await hubs.query.delete().where("channelId", channel.id)
   },
 }
 
