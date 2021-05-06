@@ -1,9 +1,6 @@
 import * as app from "../app"
 import yargsParser from "yargs-parser"
 
-import hubs from "../tables/hubs"
-import mutes from "../tables/mutes"
-
 const listener: app.Listener<"message"> = {
   event: "message",
   async run(message) {
@@ -28,28 +25,7 @@ const listener: app.Listener<"message"> = {
     if (message.content.startsWith(prefix)) cut(prefix)
     else if (mentionRegex.test(message.content))
       cut(message.content.split(" ")[0])
-    else if (!message.author.bot) {
-      // messaging
-      const hub = await hubs.query
-        .select()
-        .where("channelId", message.channel.id)
-        .first()
-      if (hub) {
-        const networkMutes = await mutes.query
-          .select()
-          .where("networkId", hub.networkId)
-
-        if (networkMutes.some((mute) => mute.userId === message.author.id))
-          return message.delete()
-
-        const networkHubs = await hubs.query
-          .select()
-          .where("networkId", hub.networkId)
-
-        await app.sendToHubs(message, networkHubs, hub.inviteLink)
-      }
-      return
-    }
+    else return
 
     let key = message.content.split(/\s+/)[0]
 
