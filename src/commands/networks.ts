@@ -1,6 +1,9 @@
 import * as app from "../app"
 
-import networks from "../tables/networks"
+import { URL } from "url"
+
+import networks, { Network } from "../tables/networks"
+import hubs, { Hub } from "../tables/hubs"
 
 const command: app.Command = {
   name: "networks",
@@ -16,7 +19,7 @@ const command: app.Command = {
   subs: [
     {
       name: "list",
-      aliases: ["ls"],
+      aliases: ["ls", "all"],
       description: "List networks",
       async run(message) {
         new app.Paginator(
@@ -70,12 +73,144 @@ const command: app.Command = {
       },
     },
     {
-      name: "remove",
-      botOwnerOnly: true,
-      description: "Remove a network",
-      aliases: ["rm", "delete", "del"],
+      name: "setup",
+      description: "Setup a new network",
+      aliases: ["set", "add", "create", "new"],
+      positional: [
+        {
+          name: "name",
+          description: "The own network name",
+          required: true,
+          checkValue: /.{3,50}/,
+        },
+      ],
+      options: [
+        {
+          name: "password",
+          description: "The own network password",
+          aliases: ["pass", "pw"],
+          checkValue: /.{5,64}/,
+        },
+      ],
       async run(message) {
-        return message.channel.send("not yet implemented.")
+        await networks.query
+          .insert({
+            ownerId: message.author.id,
+            password: message.args.password,
+            displayName: message.args.name,
+          })
+          .onConflict("ownerId")
+          .merge()
+
+        return message.channel.send(
+          `The "**${message.args.name}**" network successful created. \`ID:${message.author.id}\``
+        )
+      },
+    },
+    {
+      name: "remove",
+      description: "Kill your network",
+      aliases: [
+        "down",
+        "abort",
+        "clean",
+        "delete",
+        "teardown",
+        "rm",
+        "reset",
+        "del",
+      ],
+      positional: [
+        {
+          name: "networkId",
+          description: "The network to remove",
+          default: (message) => message?.author.id ?? "no default",
+        },
+      ],
+      async run(message) {
+        const network = await networks.query
+          .select()
+          .where("ownerId", message.args.networkId)
+          .first()
+
+        if (!network)
+          return message.channel.send("Oops, this network do not exists.")
+
+        if (
+          network.ownerId !== message.author.id &&
+          message.author.id !== process.env.BOT_OWNER
+        )
+          return message.channel.send(
+            `Oops, the **${network.displayName}** network does not belong to you.`
+          )
+
+        await app.removeNetwork.bind(message.client)(message.author.id)
+
+        return message.channel.send(
+          `You have successfully removed the "**${network.displayName}**" network and hubs.`
+        )
+      },
+    },
+    {
+      name: "join",
+      description: "Join a network, make current channel as hub",
+      guildChannelOnly: true,
+      guildOwnerOnly: true,
+      positional: [
+        {
+          name: "networkId",
+          description: "The network to join",
+          required: true,
+        },
+      ],
+      options: [
+        {
+          name: "inviteLink",
+          description: "Joined guild url",
+          aliases: ["invite", "link", "l", "invitation", "url"],
+          checkValue: (value) => {
+            try {
+              const url = new URL(value)
+              return url.hostname === "discord.gg"
+            } catch (error) {
+              return false
+            }
+          },
+        },
+        {
+          name: "password",
+          description: "The joined network password",
+          checkValue: /.{5,64}/,
+          aliases: ["pass", "pw"],
+        },
+      ],
+      async run(message) {
+        const network = await networks.query
+          .select()
+          .where("ownerId", message.args.networkId)
+          .first()
+
+        if (!network) return message.channel.send("This network don't exists.")
+
+        if ((await app.getNetworkHubs(network.id)).length > 9)
+          return message.channel.send(
+            "This network has too many hubs... (max 10)"
+          )
+
+        if (network.password && network.password !== message.args.password)
+          return message.channel.send(`Incorrect password!`)
+
+        const hub: Hub = {
+          channelId: message.channel.id,
+          networkId: network.id,
+          inviteLink: message.args.inviteLink ?? undefined,
+        }
+
+        await hubs.query.insert(hub)
+
+        return message.channel.send(
+          `You have successfully joined the "**${network.displayName}**" network`
+        )
       },
     },
   ],

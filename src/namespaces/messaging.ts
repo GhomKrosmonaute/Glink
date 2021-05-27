@@ -257,13 +257,10 @@ export function getNetworkHubs(networkId: number) {
     .then((r) => r)
 }
 
-export async function removeNetwork(
-  this: app.Client,
-  networkId: app.Snowflake
-) {
+export async function removeNetwork(this: app.Client, ownerId: app.Snowflake) {
   const network = await networksData.query
     .select()
-    .where("id", networkId)
+    .where("ownerId", ownerId)
     .first()
 
   if (!network) return
