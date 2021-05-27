@@ -20,9 +20,11 @@ const command: app.Command = {
           (await app.getNetworkHubs(network.id))
             .map((hub) => {
               const guildName =
-                (message.client.channels.cache.get(
-                  hub.channelId
-                ) as app.GuildChannel)?.guild.name ?? "not a guild channel"
+                (
+                  message.client.channels.cache.get(
+                    hub.channelId
+                  ) as app.GuildChannel
+                )?.guild.name ?? "not a guild channel"
               return `\`${hub.channelId}\` ${
                 hub.inviteLink ? `[${guildName}](${hub.inviteLink})` : guildName
               }`

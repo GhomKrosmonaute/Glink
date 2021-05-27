@@ -32,9 +32,10 @@ const command: app.Command = {
                           const networkUsers = new Set(
                             (await app.getNetworkHubs(network.id))
                               .map((hub) => {
-                                const channel = message.client.channels.cache.get(
-                                  hub.channelId
-                                )
+                                const channel =
+                                  message.client.channels.cache.get(
+                                    hub.channelId
+                                  )
                                 if (
                                   !channel ||
                                   !(channel instanceof app.GuildChannel)

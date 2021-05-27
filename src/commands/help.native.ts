@@ -13,13 +13,11 @@ const command: app.Command = {
     },
   ],
   async run(message) {
-    const prefix = await app.prefix(message.guild ?? undefined)
-
     if (message.args.command) {
       const cmd = app.commands.resolve(message.args.command)
 
       if (cmd) {
-        return app.sendCommandDetails(message, cmd, prefix)
+        return app.sendCommandDetails(message, cmd)
       } else {
         await message.channel.send(
           new app.MessageEmbed()
@@ -33,20 +31,24 @@ const command: app.Command = {
     } else {
       new app.Paginator(
         app.Paginator.divider(
-          await Promise.all(
-            app.commands.map(async (cmd) => {
-              return `**${prefix}${cmd.name}** - ${
-                (await app.scrap(cmd.description, message)) ?? "no description"
-              }`
-            })
-          ),
+          (
+            await Promise.all(
+              app.commands.map(async (cmd) => {
+                const prepared = await app.prepareCommand(message, cmd)
+                if (prepared !== true) return ""
+                return `**${message.usedPrefix}${cmd.name}** - ${
+                  cmd.description ?? "no description"
+                }`
+              })
+            )
+          ).filter((line) => line.length > 0),
           10
         ).map((page) => {
           return new app.MessageEmbed()
             .setColor("BLURPLE")
             .setAuthor("Command list", message.client.user?.displayAvatarURL())
             .setDescription(page.join("\n"))
-            .setFooter(`${prefix}help <command>`)
+            .setFooter(`${message.usedPrefix}help <command>`)
         }),
         message.channel,
         (reaction, user) => user.id === message.author.id
