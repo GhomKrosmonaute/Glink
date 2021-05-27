@@ -1,23 +1,31 @@
 import * as app from "../app"
 
+import networks, { Network } from "../tables/networks"
+import hubs from "../tables/hubs"
+
 const command: app.Command = {
   name: "hubs",
   description: "List owned hubs",
   aliases: ["hub", "net"],
   middlewares: [app.networkOwnerOnly],
   async run(message) {
-    const network = app.networks.get(message.author.id) as app.Network
+    const network = (await networks.query
+      .select()
+      .where("ownerId", message.author.id)
+      .first()) as Network
     return message.channel.send(
       new app.MessageEmbed()
         .setTitle(`Hub list - ${network.displayName}`)
         .setDescription(
-          app
-            .getNetworkHubs(message.author.id)
-            .map((hub, id) => {
+          (await app.getNetworkHubs(network.id))
+            .map((hub) => {
               const guildName =
-                (message.client.channels.cache.get(id) as app.GuildChannel)
-                  ?.guild.name ?? "not a guild channel"
-              return `\`${id}\` ${
+                (
+                  message.client.channels.cache.get(
+                    hub.channelId
+                  ) as app.GuildChannel
+                )?.guild.name ?? "not a guild channel"
+              return `\`${hub.channelId}\` ${
                 hub.inviteLink ? `[${guildName}](${hub.inviteLink})` : guildName
               }`
             })
@@ -32,7 +40,7 @@ const command: app.Command = {
       aliases: ["rm"],
       positional: [
         {
-          name: "hub",
+          name: "channel",
           description: "The hub to remove",
           castValue: "channel",
           required: true,
@@ -40,19 +48,22 @@ const command: app.Command = {
       ],
       middlewares: [app.networkOwnerOnly],
       async run(message) {
-        const { id: hubId } = message.args.channel
+        const { id } = message.args.channel
 
-        const hub = app.hubs.get(hubId)
-        const network = app.networks.get(message.author.id) as app.Network
+        const hub = await hubs.query.select().where("channelId", id).first()
+        const network = (await networks.query
+          .select()
+          .where("ownerId", message.author.id)
+          .first()) as Network
 
         if (!hub) return message.channel.send("The given hub id is incorrect.")
-        if (hub.networkId !== message.author.id)
+        if (hub.networkId !== network.id)
           return message.channel.send(
             "The targeted hub does not belong to you."
           )
 
-        app.removeHub.bind(message.client)(
-          hubId,
+        await app.removeHub.bind(message.client)(
+          id,
           `This hub was removed by the "**${network.displayName}**" owner.`
         )
 

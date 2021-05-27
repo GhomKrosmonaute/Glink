@@ -1,4 +1,5 @@
 import * as app from "../app"
+import guilds from "../tables/guilds.native"
 
 const command: app.Command<app.GuildMessage> = {
   name: "prefix",
@@ -22,7 +23,13 @@ const command: app.Command<app.GuildMessage> = {
         )}\``
       )
 
-    await app.prefixes.set(message.guild.id, prefix)
+    await guilds.query
+      .insert({
+        id: message.guild.id,
+        prefix: prefix,
+      })
+      .onConflict("id")
+      .merge()
 
     await message.channel.send(
       `My new prefix for "**${message.guild}**" is \`${prefix}\``

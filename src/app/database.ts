@@ -1,48 +1,76 @@
-import Discord from "discord.js"
-import Enmap from "enmap"
+import knex, { Knex } from "knex"
+import path from "path"
+import chalk from "chalk"
+import fs from "fs"
 
-//# Exemple with Enmap:
+import * as logger from "./logger"
+import * as handler from "./handler"
 
-/** Enmap<Guild, Prefix> */
-export const prefixes = new Enmap<Discord.Snowflake, string>({
-  name: "prefixes",
+export const tableHandler = new handler.Handler(
+  process.env.BOT_TABLES_PATH ?? path.join(process.cwd(), "dist", "tables")
+)
+
+tableHandler.once("finish", async (pathList) => {
+  const tables = await Promise.all(
+    pathList.map(async (filepath) => {
+      const tableFile = await import(filepath)
+      return tableFile.default
+    })
+  )
+  return Promise.all(
+    tables
+      .sort((a, b) => {
+        return (b.options.priority ?? 0) - (a.options.priority ?? 0)
+      })
+      .map((table) => table.make())
+  )
 })
+
+const dataDirectory = path.join(process.cwd(), "data")
+
+if (!fs.existsSync(dataDirectory)) fs.mkdirSync(dataDirectory)
 
 /**
- * Enmap<User, Network>
+ * Welcome to the database file!
+ * You can get the docs of **knex** [here](http://knexjs.org/)
  */
-export const networks = new Enmap<Discord.Snowflake, Network>({
-  name: "networks",
+
+export const db = knex({
+  client: "sqlite3",
+  useNullAsDefault: true,
+  connection: {
+    filename: path.join(dataDirectory, "sqlite3.db"),
+  },
 })
 
-/**
- * Enmap<Channel, Hub>
- */
-export const hubs = new Enmap<Discord.Snowflake, Hub>({
-  name: "hubs",
-})
-
-/**
- * Enmap<Network, Mutes>
- */
-export const mutes = new Enmap<Discord.Snowflake, Mute[]>({
-  name: "mutes",
-})
-
-export interface Network {
-  password?: string
-  displayName: string
+export interface TableOptions {
+  name: string
+  priority?: number
+  setup: (table: Knex.CreateTableBuilder) => void
 }
 
-export interface Hub {
-  networkId: Discord.Snowflake
-  inviteLink?: string
+export class Table<Type> {
+  constructor(public readonly options: TableOptions) {}
+
+  get query() {
+    return db<Type>(this.options.name)
+  }
+
+  async make(): Promise<this> {
+    try {
+      await db.schema.createTable(this.options.name, this.options.setup)
+      logger.log(
+        `created table ${chalk.blueBright(this.options.name)}`,
+        "database"
+      )
+    } catch (error) {
+      logger.log(
+        `loaded table ${chalk.blueBright(this.options.name)}`,
+        "database"
+      )
+    }
+    return this
+  }
 }
 
-export interface Mute {
-  userId: Discord.Snowflake
-  reason?: string
-  date: number
-}
-
-// Docs: https://enmap.evie.dev/
+export const tables = new Map<string, Table<any>>()

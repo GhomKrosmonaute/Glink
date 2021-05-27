@@ -1,5 +1,8 @@
 import * as app from "../app"
 
+import mutesData, { Mute } from "../tables/mutes"
+import networks, { Network } from "../tables/networks"
+
 const command: app.Command = {
   name: "mute",
   description: "Mute an user from own network",
@@ -7,7 +10,7 @@ const command: app.Command = {
   positional: [
     {
       name: "user",
-      description: "The use to mute",
+      description: "The user to mute",
       castValue: "user",
       required: true,
     },
@@ -20,23 +23,22 @@ const command: app.Command = {
     },
   ],
   async run(message) {
-    const mutes = app.mutes.ensure(message.author.id, [])
+    const network = (await networks.query
+      .select()
+      .where("ownerId", message.author.id)
+      .first()) as Network
 
-    app.mutes.set(message.author.id, [
-      ...mutes,
-      {
-        userId: message.args.user.id,
-        reason: message.args.reason ?? undefined,
-        date: Date.now(),
-      },
-    ])
+    const mute: Mute = {
+      networkId: network.id,
+      userId: message.args.user.id,
+      reason: message.args.reason ?? undefined,
+      date: Date.now(),
+    }
+
+    mutesData.query.insert(mute)
 
     return message.channel.send(
-      `You have successfully muted **${
-        message.args.user.username
-      }** from the "**${
-        app.networks.get(message.author.id)?.displayName
-      }**" network.`
+      `You have successfully muted **${message.args.user.username}** from the "**${network.displayName}**" network.`
     )
   },
   subs: [
@@ -46,16 +48,18 @@ const command: app.Command = {
       description: "List muted users",
       middlewares: [app.networkOwnerOnly],
       async run(message) {
+        const network = (await networks.query
+          .select()
+          .where("ownerId", message.author.id)
+          .first()) as Network
+        const mutes = await mutesData.query
+          .select()
+          .where("networkId", network.id)
+
         new app.Paginator(
-          app.Paginator.divider(
-            app.mutes.ensure(message.author.id, []),
-            10
-          ).map((page) =>
+          app.Paginator.divider(mutes, 10).map((page) =>
             new app.MessageEmbed()
-              .setTitle(
-                "Muted list - " +
-                  app.networks.get(message.author.id)?.displayName
-              )
+              .setTitle("Muted list - " + network.displayName)
               .setDescription(
                 page
                   .map((mute) => {
