@@ -29,9 +29,9 @@ const command: app.Command = {
                 return new app.MessageEmbed()
                   .setTitle("Networks list")
                   .setDescription(
-                    await Promise.all(
-                      page
-                        .map(async (network) => {
+                    (
+                      await Promise.all(
+                        page.map(async (network) => {
                           const networkUsers = new Set(
                             (await app.getNetworkHubs(network.id))
                               .map((hub) => {
@@ -61,8 +61,8 @@ const command: app.Command = {
                             network.ownerId
                           )}`
                         })
-                        .join("\n")
-                    )
+                      )
+                    ).join("\n")
                   )
               }
             )
