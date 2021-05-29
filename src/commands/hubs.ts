@@ -3,10 +3,11 @@ import * as app from "../app"
 import networks, { Network } from "../tables/networks"
 import hubs from "../tables/hubs"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "hubs",
   description: "List owned hubs",
   aliases: ["hub", "net"],
+  channelType: "all",
   middlewares: [app.networkOwnerOnly],
   async run(message) {
     const network = (await networks.query
@@ -34,10 +35,11 @@ const command: app.Command = {
     )
   },
   subs: [
-    {
+    new app.Command({
       name: "remove",
       description: "Remove a owned hub",
       aliases: ["rm"],
+      channelType: "all",
       positional: [
         {
           name: "channel",
@@ -71,8 +73,6 @@ const command: app.Command = {
           "The targeted hub was successfully removed."
         )
       },
-    },
+    }),
   ],
-}
-
-module.exports = command
+})

@@ -1,8 +1,9 @@
 import * as app from "../app"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "leave",
   aliases: ["exit", "quit"],
+  channelType: "all",
   guildOwnerOnly: true,
   middlewares: [app.hubOnly],
   description: "Leave a network, remove hub",
@@ -12,6 +13,4 @@ const command: app.Command = {
       "You have successfully deleted this hub."
     )
   },
-}
-
-module.exports = command
+})

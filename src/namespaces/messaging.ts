@@ -14,9 +14,7 @@ export const hubOnly: app.Middleware<"all"> = async (message) => {
   )
 }
 
-export const networkOwnerOnly: app.Middleware<"all"> = async (
-  message
-) => {
+export const networkOwnerOnly: app.Middleware<"all"> = async (message) => {
   return (
     !!(await networksData.query
       .select()

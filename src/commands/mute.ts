@@ -3,9 +3,10 @@ import * as app from "../app"
 import mutesData, { Mute } from "../tables/mutes"
 import networks, { Network } from "../tables/networks"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "mute",
   description: "Mute an user from own network",
+  channelType: "all",
   middlewares: [app.networkOwnerOnly],
   positional: [
     {
@@ -42,10 +43,11 @@ const command: app.Command = {
     )
   },
   subs: [
-    {
+    new app.Command({
       name: "list",
-      aliases: ["ls"],
       description: "List muted users",
+      channelType: "all",
+      aliases: ["ls"],
       middlewares: [app.networkOwnerOnly],
       async run(message) {
         const network = (await networks.query
@@ -56,8 +58,8 @@ const command: app.Command = {
           .select()
           .where("networkId", network.id)
 
-        new app.Paginator(
-          app.Paginator.divider(mutes, 10).map((page) =>
+        new app.Paginator({
+          pages: app.Paginator.divider(mutes, 10).map((page) =>
             new app.MessageEmbed()
               .setTitle("Muted list - " + network.displayName)
               .setDescription(
@@ -72,12 +74,10 @@ const command: app.Command = {
                   .join("\n")
               )
           ),
-          message.channel,
-          (reaction, user) => user.id === message.author.id
-        )
+          channel: message.channel,
+          filter: (reaction, user) => user.id === message.author.id,
+        })
       },
-    },
+    }),
   ],
-}
-
-module.exports = command
+})
