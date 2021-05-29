@@ -1,11 +1,12 @@
 import * as app from "../app"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "help",
-  aliases: ["h", "usage"],
-  botPermissions: ["SEND_MESSAGES"],
   description: "Help menu",
   longDescription: "Display all commands of bot or detail a target command.",
+  channelType: "all",
+  aliases: ["h", "usage"],
+  botPermissions: ["SEND_MESSAGES"],
   positional: [
     {
       name: "command",
@@ -29,16 +30,14 @@ const command: app.Command = {
         )
       }
     } else {
-      new app.Paginator(
-        app.Paginator.divider(
+      new app.Paginator({
+        pages: app.Paginator.divider(
           (
             await Promise.all(
               app.commands.map(async (cmd) => {
                 const prepared = await app.prepareCommand(message, cmd)
                 if (prepared !== true) return ""
-                return `**${message.usedPrefix}${cmd.name}** - ${
-                  cmd.description ?? "no description"
-                }`
+                return app.commandToListItem(message, cmd)
               })
             )
           ).filter((line) => line.length > 0),
@@ -50,11 +49,9 @@ const command: app.Command = {
             .setDescription(page.join("\n"))
             .setFooter(`${message.usedPrefix}help <command>`)
         }),
-        message.channel,
-        (reaction, user) => user.id === message.author.id
-      )
+        filter: (reaction, user) => user.id === message.author.id,
+        channel: message.channel,
+      })
     }
   },
-}
-
-module.exports = command
+})

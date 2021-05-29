@@ -5,7 +5,7 @@ import ss from "string-similarity"
 import hubsData, { Hub } from "../tables/hubs"
 import networksData, { Network } from "../tables/networks"
 
-export const hubOnly: app.Middleware<app.CommandMessage> = async (message) => {
+export const hubOnly: app.Middleware<"all"> = async (message) => {
   return (
     !!(await hubsData.query
       .select()
@@ -14,7 +14,7 @@ export const hubOnly: app.Middleware<app.CommandMessage> = async (message) => {
   )
 }
 
-export const networkOwnerOnly: app.Middleware<app.CommandMessage> = async (
+export const networkOwnerOnly: app.Middleware<"all"> = async (
   message
 ) => {
   return (
