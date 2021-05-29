@@ -3,9 +3,10 @@ import * as app from "../app"
 import networks, { Network } from "../tables/networks"
 import mutesData from "../tables/mutes"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "unmute",
   description: "Unmute an user from own network",
+  channelType: "all",
   middlewares: [app.networkOwnerOnly],
   positional: [
     {
@@ -40,6 +41,4 @@ const command: app.Command = {
       `You have successfully un-muted **${message.args.user.username}** from the "**${network.displayName}**" network.`
     )
   },
-}
-
-module.exports = command
+})

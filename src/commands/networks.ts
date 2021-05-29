@@ -5,9 +5,10 @@ import { URL } from "url"
 import networks, { Network } from "../tables/networks"
 import hubs, { Hub } from "../tables/hubs"
 
-const command: app.Command = {
+module.exports = new app.Command({
   name: "networks",
   description: "Networks manager",
+  channelType: "all",
   aliases: ["nw", "works"],
   async run(message) {
     return message.channel.send(
@@ -17,13 +18,14 @@ const command: app.Command = {
     )
   },
   subs: [
-    {
+    new app.Command({
       name: "list",
-      aliases: ["ls", "all"],
       description: "List networks",
+      aliases: ["ls", "all"],
+      channelType: "all",
       async run(message) {
-        new app.Paginator(
-          await Promise.all(
+        new app.Paginator({
+          pages: await Promise.all(
             app.Paginator.divider(await networks.query.select(), 10).map(
               async (page) => {
                 return new app.MessageEmbed()
@@ -67,15 +69,16 @@ const command: app.Command = {
               }
             )
           ),
-          message.channel,
-          (reaction, user) => user.id === message.author.id
-        )
+          channel: message.channel,
+          filter: (reaction, user) => user.id === message.author.id,
+        })
       },
-    },
-    {
+    }),
+    new app.Command({
       name: "setup",
       description: "Setup a new network",
       aliases: ["set", "add", "create", "new"],
+      channelType: "all",
       positional: [
         {
           name: "name",
@@ -106,10 +109,11 @@ const command: app.Command = {
           `The "**${message.args.name}**" network successful created. \`ID:${message.author.id}\``
         )
       },
-    },
-    {
+    }),
+    new app.Command({
       name: "remove",
       description: "Kill your network",
+      channelType: "all",
       aliases: [
         "down",
         "abort",
@@ -150,11 +154,11 @@ const command: app.Command = {
           `You have successfully removed the "**${network.displayName}**" network and hubs.`
         )
       },
-    },
-    {
+    }),
+    new app.Command({
       name: "join",
       description: "Join a network, make current channel as hub",
-      guildChannelOnly: true,
+      channelType: "guild",
       guildOwnerOnly: true,
       positional: [
         {
@@ -212,8 +216,6 @@ const command: app.Command = {
           `You have successfully joined the "**${network.displayName}**" network`
         )
       },
-    },
+    }),
   ],
-}
-
-module.exports = command
+})
