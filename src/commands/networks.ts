@@ -210,7 +210,7 @@ module.exports = new app.Command({
           inviteLink: message.args.inviteLink ?? undefined,
         }
 
-        await hubs.query.insert(hub)
+        await hubs.query.insert(hub).onConflict("channelId").merge()
 
         return message.channel.send(
           `You have successfully joined the "**${network.displayName}**" network`
