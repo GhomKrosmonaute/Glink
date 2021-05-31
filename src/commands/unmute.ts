@@ -6,7 +6,6 @@ import mutesData from "../tables/mutes"
 module.exports = new app.Command({
   name: "unmute",
   description: "Unmute an user from own network",
-  channelType: "all",
   middlewares: [app.networkOwnerOnly],
   positional: [
     {
