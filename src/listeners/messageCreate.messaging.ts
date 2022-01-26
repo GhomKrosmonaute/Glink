@@ -1,12 +1,14 @@
-import * as app from "../app"
-import hubs from "../tables/hubs"
-import mutes from "../tables/mutes"
+import * as app from "../app.js"
 
-const listener: app.Listener<"message"> = {
-  event: "message",
+import hubs from "../tables/hubs.js"
+import mutes from "../tables/mutes.js"
+
+const listener: app.Listener<"messageCreate"> = {
+  event: "messageCreate",
+  description: "Handle network message",
   async run(message) {
     if (!message.author.bot) {
-      if (!app.isCommandMessage(message)) return
+      if (!app.isNormalMessage(message)) return
 
       const prefix = await app.prefix(message.guild ?? undefined)
       const mentionRegex = new RegExp(`^<@!?${message.client.user?.id}> ?`)
@@ -40,4 +42,4 @@ const listener: app.Listener<"message"> = {
   },
 }
 
-module.exports = listener
+export default listener

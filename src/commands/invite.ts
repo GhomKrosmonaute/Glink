@@ -1,22 +1,25 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "invite",
   description: "Get invite link of Glink",
   channelType: "all",
   async run(message) {
-    return message.channel.send(
-      new app.MessageEmbed()
-        .setColor("BLURPLE")
-        .setTitle("My invite link")
-        .setDescription(
-          "[View permissions](https://discordapi.com/permissions.html#388176)"
-        )
-        .setURL(
-          await message.client.generateInvite({
-            permissions: 388176,
-          })
-        )
-    )
+    return message.channel.send({
+      embeds: [
+        new app.MessageEmbed()
+          .setColor("BLURPLE")
+          .setTitle("My invite link")
+          .setDescription(
+            "[View permissions](https://discordapi.com/permissions.html#388176)"
+          )
+          .setURL(
+            message.client.generateInvite({
+              scopes: ["bot"],
+              permissions: new app.Permissions(388176n),
+            })
+          ),
+      ],
+    })
   },
 })

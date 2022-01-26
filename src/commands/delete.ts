@@ -1,6 +1,6 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "delete",
   aliases: ["del", "rm", "remove"],
   description: "Delete a network message",

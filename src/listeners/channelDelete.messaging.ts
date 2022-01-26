@@ -1,12 +1,13 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-import hubs from "../tables/hubs"
+import hubs from "../tables/hubs.js"
 
 const listener: app.Listener<"channelDelete"> = {
   event: "channelDelete",
+  description: "Delete hub on channel deleted",
   async run(channel) {
     await hubs.query.delete().where("channelId", channel.id)
   },
 }
 
-module.exports = listener
+export default listener

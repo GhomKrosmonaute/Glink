@@ -1,16 +1,17 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
 const listener: app.Listener<"guildMemberRemove"> = {
   event: "guildMemberRemove",
+  description: "Remove own network on member remove",
   async run(member) {
     if (
       !member.client.guilds.cache.some((guild) =>
         guild.members.cache.has(member.id)
       )
     ) {
-      app.removeNetwork.bind(member.client)(member.id)
+      await app.removeNetwork.bind(member.client)(member.id)
     }
   },
 }
 
-module.exports = listener
+export default listener

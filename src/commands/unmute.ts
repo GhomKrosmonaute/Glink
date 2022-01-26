@@ -1,9 +1,9 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-import networks, { Network } from "../tables/networks"
-import mutesData from "../tables/mutes"
+import networks, { Network } from "../tables/networks.js"
+import mutesData from "../tables/mutes.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "unmute",
   description: "Unmute an user from own network",
   middlewares: [app.networkOwnerOnly],

@@ -1,9 +1,9 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-import mutesData, { Mute } from "../tables/mutes"
-import networks, { Network } from "../tables/networks"
+import mutesData, { Mute } from "../tables/mutes.js"
+import networks, { Network } from "../tables/networks.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "mute",
   description: "Mute an user from own network",
   channelType: "all",
@@ -58,8 +58,8 @@ module.exports = new app.Command({
           .select()
           .where("networkId", network.id)
 
-        new app.Paginator({
-          pages: app.Paginator.divider(mutes, 10).map((page) =>
+        new app.StaticPaginator({
+          pages: app.divider(mutes, 10).map((page) =>
             new app.MessageEmbed()
               .setTitle("Muted list - " + network.displayName)
               .setDescription(

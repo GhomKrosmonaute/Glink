@@ -1,8 +1,8 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-import guilds from "../tables/guilds.native"
+import guilds from "../tables/guilds.native.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "prefix",
   guildOwnerOnly: true,
   channelType: "guild",

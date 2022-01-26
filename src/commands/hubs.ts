@@ -1,9 +1,9 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
-import networks, { Network } from "../tables/networks"
-import hubs from "../tables/hubs"
+import networks, { Network } from "../tables/networks.js"
+import hubs from "../tables/hubs.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "hubs",
   description: "List owned hubs",
   aliases: ["hub", "net"],
@@ -14,25 +14,29 @@ module.exports = new app.Command({
       .select()
       .where("ownerId", message.author.id)
       .first()) as Network
-    return message.channel.send(
-      new app.MessageEmbed()
-        .setTitle(`Hub list - ${network.displayName}`)
-        .setDescription(
-          (await app.getNetworkHubs(network.id))
-            .map((hub) => {
-              const guildName =
-                (
-                  message.client.channels.cache.get(
-                    hub.channelId
-                  ) as app.GuildChannel
-                )?.guild.name ?? "not a guild channel"
-              return `\`${hub.channelId}\` ${
-                hub.inviteLink ? `[${guildName}](${hub.inviteLink})` : guildName
-              }`
-            })
-            .join("\n")
-        )
-    )
+    return message.channel.send({
+      embeds: [
+        new app.MessageEmbed()
+          .setTitle(`Hub list - ${network.displayName}`)
+          .setDescription(
+            (await app.getNetworkHubs(network.id))
+              .map((hub) => {
+                const guildName =
+                  (
+                    message.client.channels.cache.get(
+                      hub.channelId
+                    ) as app.GuildChannel
+                  )?.guild.name ?? "not a guild channel"
+                return `\`${hub.channelId}\` ${
+                  hub.inviteLink
+                    ? `[${guildName}](${hub.inviteLink})`
+                    : guildName
+                }`
+              })
+              .join("\n")
+          ),
+      ],
+    })
   },
   subs: [
     new app.Command({

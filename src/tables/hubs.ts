@@ -1,4 +1,4 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
 export interface Hub {
   channelId: string
@@ -8,6 +8,7 @@ export interface Hub {
 
 const table = new app.Table<Hub>({
   name: "hubs",
+  description: "Represent a hub linked on Discord channel",
   setup: (table) => {
     table.string("channelId").unique()
     table

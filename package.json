@@ -4,13 +4,14 @@
   "author": "ghom",
   "description": "Inter-guild chat network.",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "build": "gulp build",
     "watch": "gulp watch",
-    "start": "npm run build && node .",
-    "format": "prettier --write src",
+    "start": "npm run build && node dist/index",
+    "format": "prettier --write src tests",
     "update": "gulp update",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit && npm run build && node tests/index.test.js"
   },
   "prettier": {
     "semi": false,
@@ -26,10 +27,10 @@
   },
   "homepage": "https://github.com/CamilleAbella/bot.ts#readme",
   "dependencies": {
-    "axios": "^0.21.1",
     "boxen": "^6.2.1",
     "chalk": "^5.0.0",
     "dayjs": "^1.10.7",
+    "dirname-filename-esm": "^1.1.1",
     "discord.js": "^13.6.0",
     "dotenv": "^14.2.0",
     "figlet": "^1.5.2",
@@ -41,8 +42,7 @@
     "sqlite3": "^5.0.2",
     "string-similarity": "^4.0.4",
     "tims": "^2.1.0",
-    "yargs-parser": "^21.0.0",
-    "dirname-filename-esm": "^1.1.1"
+    "yargs-parser": "^21.0.0"
   },
   "devDependencies": {
     "@types/boxen": "^3.0.1",
@@ -57,9 +57,11 @@
     "@types/vinyl-paths": "^0.0.31",
     "@types/ws": "^8.2.2",
     "@types/yargs-parser": "^20.2.1",
+    "axios": "^0.25.0",
     "del": "^6.0.0",
     "discord-api-types": "^0.26.1",
     "esbuild": "^0.14.11",
+    "esm": "^3.2.25",
     "fancy-log": "^2.0.0",
     "git-commit-info": "^2.0.1",
     "gulp": "^4.0.2",
@@ -69,12 +71,10 @@
     "make-bot.ts": "^2.4.1",
     "nodemon": "^2.0.15",
     "typescript": "^4.5.4",
-    "vinyl-paths": "^4.0.0",
-    "axios": "^0.25.0",
-    "esm": "^3.2.25"
+    "vinyl-paths": "^4.0.0"
   },
   "engines": {
-    "node": ">=14",
-    "npm": ">=7.5.2"
+    "node": ">=16.6.0",
+    "npm": ">=7.24.2"
   }
 }

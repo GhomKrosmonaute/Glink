@@ -1,11 +1,11 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
 import { URL } from "url"
 
-import networks, { Network } from "../tables/networks"
-import hubs, { Hub } from "../tables/hubs"
+import networks, { Network } from "../tables/networks.js"
+import hubs, { Hub } from "../tables/hubs.js"
 
-module.exports = new app.Command({
+export default new app.Command({
   name: "networks",
   description: "Networks manager",
   channelType: "all",
@@ -24,50 +24,47 @@ module.exports = new app.Command({
       aliases: ["ls", "all"],
       channelType: "all",
       async run(message) {
-        new app.Paginator({
+        new app.StaticPaginator({
           pages: await Promise.all(
-            app.Paginator.divider(await networks.query.select(), 10).map(
-              async (page) => {
-                return new app.MessageEmbed()
-                  .setTitle("Networks list")
-                  .setDescription(
-                    (
-                      await Promise.all(
-                        page.map(async (network) => {
-                          const networkUsers = new Set(
-                            (await app.getNetworkHubs(network.id))
-                              .map((hub) => {
-                                const channel =
-                                  message.client.channels.cache.get(
-                                    hub.channelId
-                                  )
-                                if (
-                                  !channel ||
-                                  !(channel instanceof app.GuildChannel)
-                                )
-                                  return []
-                                return channel.guild.members.cache
-                                  .filter(({ user }) => !user.bot)
-                                  .map((member) => member.id)
-                              })
-                              .flat()
-                          )
+            app.divider(await networks.query.select(), 10).map(async (page) => {
+              return new app.MessageEmbed()
+                .setTitle("Networks list")
+                .setDescription(
+                  (
+                    await Promise.all(
+                      page.map(async (network) => {
+                        const networkUsers = new Set(
+                          (await app.getNetworkHubs(network.id))
+                            .map((hub) => {
+                              const channel = message.client.channels.cache.get(
+                                hub.channelId
+                              )
+                              if (
+                                !channel ||
+                                !(channel instanceof app.GuildChannel)
+                              )
+                                return []
+                              return channel.guild.members.cache
+                                .filter(({ user }) => !user.bot)
+                                .map((member) => member.id)
+                            })
+                            .flat()
+                        )
 
-                          return `\`${app.forceTextSize(
-                            network.displayName,
-                            20,
-                            true
-                          )}\` - [ ${
-                            networkUsers.size
-                          } 👤 ] - owner: ${message.client.users.cache.get(
-                            network.ownerId
-                          )}`
-                        })
-                      )
-                    ).join("\n")
-                  )
-              }
-            )
+                        return `\`${app.forceTextSize(
+                          network.displayName,
+                          20,
+                          true
+                        )}\` - [ ${
+                          networkUsers.size
+                        } 👤 ] - owner: ${message.client.users.cache.get(
+                          network.ownerId
+                        )}`
+                      })
+                    )
+                  ).join("\n")
+                )
+            })
           ),
           channel: message.channel,
           filter: (reaction, user) => user.id === message.author.id,

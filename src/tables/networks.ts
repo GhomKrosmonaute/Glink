@@ -1,4 +1,4 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
 export interface Network {
   id: number
@@ -9,6 +9,7 @@ export interface Network {
 
 const table = new app.Table<Network>({
   name: "networks",
+  description: "Represent a network linked on Discord user",
   priority: 10,
   setup: (table) => {
     table.increments("id").primary().unsigned()

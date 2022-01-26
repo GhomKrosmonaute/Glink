@@ -1,4 +1,4 @@
-import * as app from "../app"
+import * as app from "../app.js"
 
 export interface Mute {
   networkId: number
@@ -9,6 +9,7 @@ export interface Mute {
 
 const table = new app.Table<Mute>({
   name: "mutes",
+  description: "Represent a muted user",
   setup: (table) => {
     table
       .integer("networkId")

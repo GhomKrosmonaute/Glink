@@ -1,26 +1,33 @@
-import * as app from "../app"
+import * as app from "../app.js"
 import * as Url from "url"
 import ss from "string-similarity"
 
-import hubsData, { Hub } from "../tables/hubs"
-import networksData, { Network } from "../tables/networks"
+import hubsData, { Hub } from "../tables/hubs.js"
+import networksData, { Network } from "../tables/networks.js"
 
-export const hubOnly: app.Middleware<"all"> = async (message) => {
-  return (
-    !!(await hubsData.query
-      .select()
-      .where("channelId", message.channel.id)
-      .first()) || "You must use this command in a hub."
-  )
+export const hubOnly: app.Middleware<"all"> = async (message, data) => {
+  return {
+    result:
+      !!(await hubsData.query
+        .select()
+        .where("channelId", message.channel.id)
+        .first()) || "You must use this command in a hub.",
+    data,
+  }
 }
 
-export const networkOwnerOnly: app.Middleware<"all"> = async (message) => {
-  return (
-    !!(await networksData.query
-      .select()
-      .where("ownerId", message.author.id)
-      .first()) || "You must have setup a network."
-  )
+export const networkOwnerOnly: app.Middleware<"all"> = async (
+  message,
+  data
+) => {
+  return {
+    result:
+      !!(await networksData.query
+        .select()
+        .where("ownerId", message.author.id)
+        .first()) || "You must have setup a network.",
+    data,
+  }
 }
 
 export async function sendToHubs(
@@ -28,12 +35,13 @@ export async function sendToHubs(
   hubs: Hub[],
   inviteLink?: string
 ): Promise<unknown> {
-  const channels: app.Channel[] = []
+  const channels: app.AnyChannel[] = []
 
   for (const hub of hubs) {
     try {
       const channel = await message.client.channels.fetch(hub.channelId)
-      channels.push(channel)
+      if (channel) channels.push(channel)
+      else throw new Error()
     } catch (error) {
       await hubsData.query.delete().where("channelId", hub.channelId)
     }
@@ -47,14 +55,14 @@ export async function sendToHubs(
     return Promise.all(
       channels.map((channel) => {
         if (channel.isText() && channel.id !== message.channel.id)
-          return channel.send(embed)
+          return channel.send({ embeds: [embed] })
       })
     )
   }
 
   return Promise.all(
     channels.map((channel) => {
-      if (channel.isText()) return channel.send(embed)
+      if (channel.isText()) return channel.send({ embeds: [embed] })
     })
   )
 }
@@ -117,6 +125,7 @@ export async function deleteMessage(
     let channel
     try {
       channel = await target.client.channels.fetch(hub.channelId)
+      if (!channel) throw new Error()
     } catch (error) {
       return removeHub.bind(target.client)(hub.channelId)
     }
@@ -138,28 +147,29 @@ export async function deleteMessage(
 }
 
 function glinkEmbedFrom(
-  message: app.Message,
+  message: app.Message & { client: app.Client<true> },
   inviteLink?: string
 ): app.MessageEmbed {
-  const embed = new app.MessageEmbed()
+  const embed = new app.SafeMessageEmbed()
     .setURL(
       compileEmbedParams({
         authorId: message.author.id,
       })
     )
     .setColor(message.member?.displayHexColor ?? "BLURPLE")
-    .setAuthor(
-      message.author.username,
-      message.author.displayAvatarURL({
+    .setAuthor({
+      name: message.author.username,
+      iconURL: message.author.displayAvatarURL({
         dynamic: true,
       }),
-      inviteLink
-    )
-    .setFooter(
-      message.guild?.name,
-      message.guild?.iconURL({ dynamic: true }) ??
-        message.client.user?.displayAvatarURL({ dynamic: true })
-    )
+      url: inviteLink,
+    })
+    .setFooter({
+      text: message.guild?.name || "Unknown guild name",
+      iconURL:
+        message.guild?.iconURL({ dynamic: true }) ??
+        message.client.user.displayAvatarURL({ dynamic: true }),
+    })
     .setTimestamp()
 
   function findEmojiAndAttachIt(name: string) {
@@ -172,10 +182,10 @@ function glinkEmbedFrom(
   }
 
   function findEmoji(name: string): app.GuildEmoji | undefined {
-    const emojis = message.client.emojis.cache.array()
+    const emojis = Array.from(message.client.emojis.cache.values())
     const { bestMatchIndex } = ss.findBestMatch(
       name.toLowerCase(),
-      emojis.map((emoji) => emoji.name.toLowerCase())
+      emojis.map((emoji) => emoji.name?.toLowerCase() ?? "")
     )
     return emojis[bestMatchIndex]
   }
