@@ -217,6 +217,31 @@ export default new app.Command({
 
         await hubs.query.insert(hub).onConflict("channelId").merge()
 
+        const hubList = await hubs.query
+          .where({ networkId: network.id })
+          .andWhereNot({
+            channelId: message.args.channel.id,
+          })
+
+        await app.sendTextToHubs(
+          message.client,
+          {
+            embeds: [
+              new app.SafeMessageEmbed()
+                .setTitle(`"${message.guild.name}" joined us!`)
+                .setURL(
+                  message.args.inviteLink ??
+                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
+                )
+                .setImage(
+                  message.guild.iconURL({ dynamic: true }) ??
+                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
+                ),
+            ],
+          },
+          hubList
+        )
+
         return message.channel.send(
           `You have successfully joined the "**${network.displayName}**" network`
         )

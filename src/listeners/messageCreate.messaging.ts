@@ -35,7 +35,7 @@ const listener: app.Listener<"messageCreate"> = {
           .select()
           .where("networkId", hub.networkId)
 
-        await app.sendToHubs(message, networkHubs, hub.inviteLink)
+        await app.sendHubMessageToHubs(message, networkHubs, hub.inviteLink)
       }
       return
     }

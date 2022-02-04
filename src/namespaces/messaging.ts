@@ -31,7 +31,31 @@ export const networkOwnerOnly: app.Middleware<"all"> = async (
   }
 }
 
-export async function sendToHubs(
+export async function sendTextToHubs(
+  client: app.Client,
+  message: string | { embeds: app.MessageEmbed[] },
+  hubs: Hub[]
+) {
+  const channels: app.AnyChannel[] = []
+
+  for (const hub of hubs) {
+    try {
+      const channel = await client.channels.fetch(hub.channelId)
+      if (channel) channels.push(channel)
+      else throw new Error()
+    } catch (error) {
+      await hubsData.query.delete().where("channelId", hub.channelId)
+    }
+  }
+
+  return Promise.all(
+    channels.map((channel) => {
+      if (channel.isText()) return channel.send(message)
+    })
+  )
+}
+
+export async function sendHubMessageToHubs(
   message: app.Message,
   hubs: Hub[],
   inviteLink?: string
