@@ -4,6 +4,7 @@ import ss from "string-similarity"
 
 import hubsData, { Hub } from "../tables/hubs.js"
 import networksData, { Network } from "../tables/networks.js"
+import discord from "discord.js"
 
 export const hubOnly: app.Middleware<"all"> = async (message, data) => {
   return {
@@ -172,22 +173,20 @@ function glinkEmbedFrom(
     })
     .setTimestamp()
 
-  function findEmojiAndAttachIt(name: string) {
-    const emoji = findEmoji(name)
-    if (emoji) {
-      if (attachImage(emoji.url)) {
-        message.content = ""
-      }
+  function findEmojiAndAttachIt(emoji: Pick<discord.Emoji, "id" | "animated">) {
+    if (attachImage(getEmojiURL(emoji))) {
+      message.content = ""
     }
   }
 
-  function findEmoji(name: string): app.GuildEmoji | undefined {
-    const emojis = Array.from(message.client.emojis.cache.values())
-    const { bestMatchIndex } = ss.findBestMatch(
-      name.toLowerCase(),
-      emojis.map((emoji) => emoji.name?.toLowerCase() ?? "")
-    )
-    return emojis[bestMatchIndex]
+  /**
+   * Return emoji URL or nothing
+   */
+  function getEmojiURL({
+    id,
+    animated,
+  }: Pick<discord.Emoji, "id" | "animated">): string {
+    return `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "png"}`
   }
 
   function attachImage(url: string): boolean {
@@ -221,37 +220,20 @@ function glinkEmbedFrom(
   }
 
   {
-    const match = /^<a?:([a-z-_]+):(\d+)>$/i.exec(message.content)
+    const match = /^<(a)?:[a-z-_]+:(\d+)>$/i.exec(message.content)
 
     if (match) {
-      const emoji = message.client.emojis.resolve(match[2])
-      if (emoji) {
-        if (attachImage(emoji.url)) {
-          message.content = ""
-        }
-      } else {
-        findEmojiAndAttachIt(match[1])
-      }
+      const [, animated, id] = match
+      findEmojiAndAttachIt({ animated: !!animated, id })
     }
   }
 
-  {
-    const match = /^:(\S+):$/.exec(message.content)
-
-    if (match) findEmojiAndAttachIt(match[1])
-  }
-
-  message.content = message.content
-    .split(" ")
-    .map((word) => {
-      const match = /^:(\S+):$/.exec(word)
-      if (match) {
-        const emoji = findEmoji(match[1])
-        if (emoji) return emoji.url
-      }
-      return word
-    })
-    .join(" ")
+  message.content = message.content.replace(
+    /^<(a)?:[a-z-_]+:(\d+)>$/gi,
+    (full, animated, id) => {
+      return getEmojiURL({ animated: !!animated, id })
+    }
+  )
 
   if (message.content) embed.setDescription(message.content)
 

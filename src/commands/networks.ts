@@ -188,8 +188,8 @@ export default new app.Command({
           name: "channel",
           description: "The channel that join network",
           default: (message) => message?.channel.id ?? "",
-          castValue: "channel"
-        }
+          castValue: "channel",
+        },
       ],
       async run(message) {
         const network = await networks.query
@@ -200,11 +200,13 @@ export default new app.Command({
         if (!network) return message.send("This network don't exists.")
 
         if ((await app.getNetworkHubs(network.id)).length > 9)
-          return message.send(
-            "This network has too many hubs... (max 10)"
-          )
+          return message.send("This network has too many hubs... (max 10)")
 
-        if (network.ownerId !== message.author.id && network.password && (network.password !== message.args.password))
+        if (
+          network.ownerId !== message.author.id &&
+          network.password &&
+          network.password !== message.args.password
+        )
           return message.channel.send(`Incorrect password!`)
 
         const hub: Hub = {
