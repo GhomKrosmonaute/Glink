@@ -228,7 +228,7 @@ export default new app.Command({
           {
             embeds: [
               new app.SafeMessageEmbed()
-                .setTitle(`"${message.guild.name}" joined us!`)
+                .setTitle(`"${message.args.channel.guild.name}" joined us!`)
                 .setURL(
                   message.args.inviteLink ??
                     "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
