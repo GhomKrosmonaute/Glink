@@ -234,7 +234,7 @@ export default new app.Command({
                     "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
                 )
                 .setImage(
-                  message.guild.iconURL({ dynamic: true }) ??
+                  message.args.channel.guild.iconURL({ dynamic: true }) ??
                     "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
                 ),
             ],
