@@ -177,6 +177,7 @@ function glinkEmbedFrom(
   inviteLink?: string,
 ): app.EmbedBuilder {
   const embed = new app.EmbedBuilder()
+    .setDescription(message.content)
     .setURL(
       compileEmbedParams({
         authorId: message.author.id,
@@ -262,7 +263,7 @@ function glinkEmbedFrom(
   return embed
 }
 
-export function getNetworkHubs(networkId: number) {
+export async function getNetworkHubs(networkId: number) {
   return hubsData.query
     .select()
     .where("networkId", networkId)

@@ -11,11 +11,11 @@ const listener: app.Listener<"messageCreate"> = {
       if (!app.isNormalMessage(message)) return
 
       const prefix = await app.prefix(message.guild ?? undefined)
-      const mentionRegex = new RegExp(`^<@!?${message.client.user?.id}> ?`)
+      const botMention = new RegExp(`^<@!?${message.client.user?.id}> ?`)
 
       if (
         message.content.startsWith(prefix) ||
-        mentionRegex.test(message.content)
+        botMention.test(message.content)
       )
         return
 
