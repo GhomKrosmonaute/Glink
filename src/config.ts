@@ -3,12 +3,11 @@ import * as app from "./app.js"
 export const config: app.Config = {
   ignoreBots: true,
   async getPrefix(message) {
-    return message.guild
-      ? await app.prefix(message.guild)
-      : process.env.BOT_PREFIX!
+    return app.prefix(message.guild ?? undefined)
   },
   client: {
     intents: [
+      "MessageContent", // olala quel débile je suis
       "Guilds",
       "GuildMembers",
       "GuildBans",

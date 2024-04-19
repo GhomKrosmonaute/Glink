@@ -23,6 +23,7 @@ const listener: app.Listener<"messageCreate"> = {
         .select()
         .where("channelId", message.channel.id)
         .first()
+
       if (hub) {
         const networkMutes = await mutes.query
           .select()

@@ -38,7 +38,7 @@ const listener: app.Listener<"messageCreate"> = {
       app.emitMessage(message.member, message)
     }
 
-    let dynamicContent = message.content
+    let dynamicContent = message.content.slice()
 
     const cut = function (key: string) {
       dynamicContent = dynamicContent.slice(key.length).trim()

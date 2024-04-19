@@ -176,8 +176,12 @@ function glinkEmbedFrom(
   message: app.Message & { client: app.Client<true> },
   inviteLink?: string,
 ): app.EmbedBuilder {
+  let dynamicContent = message.content
+
+  if (!dynamicContent)
+    throw new Error("You need to add the MessageContent intent.")
+
   const embed = new app.EmbedBuilder()
-    .setDescription(message.content)
     .setURL(
       compileEmbedParams({
         authorId: message.author.id,
@@ -198,7 +202,7 @@ function glinkEmbedFrom(
 
   function findEmojiAndAttachIt(emoji: Pick<discord.Emoji, "id" | "animated">) {
     if (attachImage(getEmojiURL(emoji))) {
-      message.content = ""
+      dynamicContent = ""
     }
   }
 
@@ -223,12 +227,12 @@ function glinkEmbedFrom(
     return true
   }
 
-  for (const word of message.content.split(/\s+/)) {
+  for (const word of dynamicContent.split(/\s+/)) {
     if (/^https?:\/\//i.test(word)) {
       const url = new Url.URL(word)
       url.search = ""
       if (/\.(?:png|gif|jpe?g)$/i.test(url.href)) {
-        message.content = message.content.replace(word, "").trim()
+        dynamicContent = dynamicContent.replace(word, "").trim()
         attachImage(url.href)
       }
     }
@@ -243,7 +247,7 @@ function glinkEmbedFrom(
   }
 
   {
-    const match = /^<(a)?:[a-z-_]+:(\d+)>$/i.exec(message.content)
+    const match = /^<(a)?:[a-z-_]+:(\d+)>$/i.exec(dynamicContent)
 
     if (match) {
       const [, animated, id] = match
@@ -251,14 +255,14 @@ function glinkEmbedFrom(
     }
   }
 
-  message.content = message.content.replace(
+  dynamicContent = dynamicContent.replace(
     /^<(a)?:[a-z-_]+:(\d+)>$/gi,
     (full, animated, id) => {
       return getEmojiURL({ animated: !!animated, id })
     },
   )
 
-  if (message.content) embed.setDescription(message.content)
+  if (dynamicContent) embed.setDescription(dynamicContent)
 
   return embed
 }
