@@ -14,7 +14,7 @@ export default new app.Command({
     return message.channel.send(
       "Type `" +
         (await app.prefix(message.guild ?? undefined)) +
-        "help networks` for usage detail."
+        "help networks` for usage detail.",
     )
   },
   subs: [
@@ -27,7 +27,7 @@ export default new app.Command({
         new app.StaticPaginator({
           pages: await Promise.all(
             app.divider(await networks.query.select(), 10).map(async (page) => {
-              return new app.MessageEmbed()
+              return new app.EmbedBuilder()
                 .setTitle("Networks list")
                 .setDescription(
                   (
@@ -37,7 +37,7 @@ export default new app.Command({
                           (await app.getNetworkHubs(network.id))
                             .map((hub) => {
                               const channel = message.client.channels.cache.get(
-                                hub.channelId
+                                hub.channelId,
                               )
                               if (
                                 !channel ||
@@ -48,23 +48,23 @@ export default new app.Command({
                                 .filter(({ user }) => !user.bot)
                                 .map((member) => member.id)
                             })
-                            .flat()
+                            .flat(),
                         )
 
                         return `\`${app.forceTextSize(
                           network.displayName,
                           20,
-                          true
+                          true,
                         )}\` - [ ${
                           networkUsers.size
                         } 👤 ] - owner: ${message.client.users.cache.get(
-                          network.ownerId
+                          network.ownerId,
                         )}`
-                      })
+                      }),
                     )
-                  ).join("\n")
+                  ).join("\n"),
                 )
-            })
+            }),
           ),
           channel: message.channel,
           filter: (reaction, user) => user.id === message.author.id,
@@ -79,17 +79,19 @@ export default new app.Command({
       positional: [
         {
           name: "name",
+          type: "string",
           description: "The own network name",
           required: true,
-          checkValue: /.{3,50}/,
+          validate: /.{3,50}/.test,
         },
       ],
       options: [
         {
           name: "password",
+          type: "string",
           description: "The own network password",
           aliases: ["pass", "pw"],
-          checkValue: /.{5,64}/,
+          validate: /.{5,64}/.test,
         },
       ],
       async run(message) {
@@ -103,7 +105,7 @@ export default new app.Command({
           .merge()
 
         return message.channel.send(
-          `The "**${message.args.name}**" network successful created. \`ID:${message.author.id}\``
+          `The "**${message.args.name}**" network successful created. \`ID:${message.author.id}\``,
         )
       },
     }),
@@ -124,8 +126,9 @@ export default new app.Command({
       positional: [
         {
           name: "networkId",
+          type: "string",
           description: "The network to remove",
-          default: (message) => message?.author.id ?? "no default",
+          default: (message: app.Message) => message?.author.id ?? "no default",
         },
       ],
       async run(message) {
@@ -142,13 +145,13 @@ export default new app.Command({
           message.author.id !== process.env.BOT_OWNER
         )
           return message.channel.send(
-            `Oops, the **${network.displayName}** network does not belong to you.`
+            `Oops, the **${network.displayName}** network does not belong to you.`,
           )
 
         await app.removeNetwork.bind(message.client)(message.author.id)
 
         return message.channel.send(
-          `You have successfully removed the "**${network.displayName}**" network and hubs.`
+          `You have successfully removed the "**${network.displayName}**" network and hubs.`,
         )
       },
     }),
@@ -160,6 +163,7 @@ export default new app.Command({
       positional: [
         {
           name: "networkId",
+          type: "string",
           description: "The network to join",
           required: true,
         },
@@ -167,9 +171,10 @@ export default new app.Command({
       options: [
         {
           name: "inviteLink",
+          type: "string",
           description: "Joined guild url",
           aliases: ["invite", "link", "l", "invitation", "url"],
-          checkValue: (value) => {
+          validate: (value: string) => {
             try {
               const url = new URL(value)
               return url.hostname === "discord.gg"
@@ -180,15 +185,16 @@ export default new app.Command({
         },
         {
           name: "password",
+          type: "string",
           description: "The joined network password",
-          checkValue: /.{5,64}/,
+          validate: /.{5,64}/.test,
           aliases: ["pass", "pw"],
         },
         {
           name: "channel",
+          type: "channel",
           description: "The channel that join network",
-          default: (message) => message?.channel.id ?? "",
-          castValue: "channel",
+          default: (message: app.Message) => message?.channel.id ?? "",
         },
       ],
       async run(message) {
@@ -197,10 +203,12 @@ export default new app.Command({
           .where("ownerId", message.args.networkId)
           .first()
 
-        if (!network) return message.send("This network don't exists.")
+        if (!network) return message.channel.send("This network don't exists.")
 
         if ((await app.getNetworkHubs(network.id)).length > 9)
-          return message.send("This network has too many hubs... (max 10)")
+          return message.channel.send(
+            "This network has too many hubs... (max 10)",
+          )
 
         if (
           network.ownerId !== message.author.id &&
@@ -223,27 +231,29 @@ export default new app.Command({
             channelId: message.args.channel.id,
           })
 
+        const channel = message.args.channel as app.GuildChannel
+
         await app.sendTextToHubs(
           message.client,
           {
             embeds: [
-              new app.SafeMessageEmbed()
-                .setTitle(`"${message.args.channel.guild.name}" joined us!`)
+              new app.EmbedBuilder()
+                .setTitle(`"${channel.guild.name}" joined us!`)
                 .setURL(
                   message.args.inviteLink ??
-                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
+                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png",
                 )
                 .setImage(
-                  message.args.channel.guild.iconURL({ dynamic: true }) ??
-                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png"
+                  channel.guild.iconURL() ??
+                    "https://media.discordapp.net/attachments/609313381421154304/939238186180288572/yellowbar.png",
                 ),
             ],
           },
-          hubList
+          hubList,
         )
 
         return message.channel.send(
-          `You have successfully joined the "**${network.displayName}**" network`
+          `You have successfully joined the "**${network.displayName}**" network`,
         )
       },
     }),

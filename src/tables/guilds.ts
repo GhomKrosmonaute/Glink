@@ -5,9 +5,11 @@ export interface Guild {
   prefix: string
 }
 
+/**
+ * Represent a guild
+ */
 export default new app.Table<Guild>({
   name: "guilds",
-  description: "Represent a guild",
   setup: (table) => {
     table.string("id").unique()
     table.string("prefix").nullable()

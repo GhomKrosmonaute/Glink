@@ -1,15 +1,15 @@
-import discord from "discord.js"
-
-export const client = new discord.Client({ intents: [] })
+process.env.BOT_MODE = "test"
 
 const app = await import("../dist/app.js")
 
 try {
-  await app.tableHandler.load(client)
-  await app.commandHandler.load(client)
-  await app.listenerHandler.load(client)
+  await app.orm.handler.init()
+  await app.commandHandler.init()
+  await app.slashCommandHandler.init()
+  await app.listenerHandler.init()
+  await app.checkUpdates()
 
-  app.log("Correctly started")
+  app.log("correctly started")
   process.exit(0)
 } catch (error) {
   app.error(error, "index", true)

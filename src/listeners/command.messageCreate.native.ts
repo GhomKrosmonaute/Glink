@@ -1,53 +1,31 @@
+// system file, please don't modify it
+
 import * as app from "../app.js"
 import yargsParser from "yargs-parser"
-import { filename } from "dirname-filename-esm"
-
-const __filename = filename(import.meta)
 
 const listener: app.Listener<"messageCreate"> = {
   event: "messageCreate",
-  description: "Handle message for commands",
+  description: "Handle messages for commands",
   async run(message) {
+    if (app.config.ignoreBots && message.author.bot) return
+
     if (!app.isNormalMessage(message)) return
 
-    const prefix = await app.prefix(message.guild ?? undefined)
+    const prefix = await app.config.getPrefix(message)
 
     if (new RegExp(`^<@!?${message.client.user.id}>$`).test(message.content))
       return message.channel
         .send({
           embeds: [
-            new app.SafeMessageEmbed()
-              .setColor()
+            new app.EmbedBuilder()
+              .setColor("Blurple")
               .setDescription(`My prefix is \`${prefix}\``),
           ],
         })
         .catch()
 
     message.usedAsDefault = false
-
-    message.send = async function (
-      this: app.NormalMessage,
-      sent: app.SentItem
-    ) {
-      return this.channel.send(sent)
-    }.bind(message)
-
-    message.sendTimeout = async function (
-      this: app.NormalMessage,
-      timeout: number,
-      sent: app.SentItem
-    ) {
-      const m = await this.channel.send(sent)
-      setTimeout(
-        function (this: app.NormalMessage) {
-          if (!this.deleted) this.delete().catch()
-        }.bind(this),
-        timeout
-      )
-      return m
-    }.bind(message)
-
-    message.isFromBotOwner = message.author.id === process.env.BOT_OWNER
+    message.isFromBotOwner = message.author.id === process.env.BOT_OWNER!
 
     app.emitMessage(message.channel, message)
     app.emitMessage(message.author, message)
@@ -80,9 +58,14 @@ const listener: app.Listener<"messageCreate"> = {
     let key = dynamicContent.split(/\s+/)[0]
 
     // turn ON/OFF
-    if (key !== "turn" && !app.cache.ensure<boolean>("turn", true)) return
+    if (
+      key !== "turn" &&
+      !app.cache.ensure<boolean>("turn", true) &&
+      message.author.id !== process.env.BOT_OWNER
+    )
+      return
 
-    let cmd: app.Command<any> = app.commands.resolve(key) as app.Command<any>
+    let cmd = app.commands.resolve(key)
 
     if (!cmd) {
       if (app.defaultCommand) {
@@ -128,9 +111,9 @@ const listener: app.Listener<"messageCreate"> = {
 
     // parse CommandMessage arguments
     const parsedArgs = yargsParser(dynamicContent)
-    const restPositional = parsedArgs._.slice() ?? []
+    const restPositional = (parsedArgs._?.slice() ?? []).map(String)
 
-    message.args = (parsedArgs._?.slice(0) ?? []).map((positional) => {
+    message.args = restPositional.map((positional) => {
       if (/^(?:".+"|'.+')$/.test(positional))
         return positional.slice(1, positional.length - 1)
       return positional
@@ -156,7 +139,8 @@ const listener: app.Listener<"messageCreate"> = {
     try {
       await cmd.options.run.bind(cmd)(message)
     } catch (error: any) {
-      app.error(error, cmd.filepath ?? __filename, true)
+      app.error(error, cmd.filepath!, true)
+
       message.channel
         .send(
           app.code.stringify({
@@ -164,10 +148,10 @@ const listener: app.Listener<"messageCreate"> = {
               error.message?.replace(/\x1b\[\d+m/g, "") ?? "unknown"
             }`,
             lang: "js",
-          })
+          }),
         )
         .catch((error) => {
-          app.error(error, cmd.filepath ?? __filename, true)
+          app.error(error, cmd!.filepath!, true)
         })
     }
   },

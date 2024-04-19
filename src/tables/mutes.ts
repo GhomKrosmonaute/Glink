@@ -7,9 +7,11 @@ export interface Mute {
   date: number
 }
 
+/**
+ * Represent a muted user
+ */
 const table = new app.Table<Mute>({
   name: "mutes",
-  description: "Represent a muted user",
   setup: (table) => {
     table
       .integer("networkId")

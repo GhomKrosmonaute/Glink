@@ -1,3 +1,5 @@
+// native file, if you want edit it, remove the "native" suffix from the filename
+
 import cp from "child_process"
 import util from "util"
 import * as ge from "ghom-eval"
@@ -5,11 +7,9 @@ import * as app from "../app.js"
 
 const exec = util.promisify(cp.exec)
 
-const packageJson = app.fetchPackageJson()
-
 const alreadyInstalled = (pack: string): boolean =>
-  packageJson.dependencies.hasOwnProperty(pack) ||
-  packageJson.devDependencies.hasOwnProperty(pack)
+  app.packageJSON.dependencies.hasOwnProperty(pack) ||
+  app.packageJSON.devDependencies.hasOwnProperty(pack)
 
 export default new app.Command({
   name: "eval",
@@ -23,23 +23,25 @@ export default new app.Command({
     required: true,
   },
   options: [
-    {
-      name: "packages",
-      aliases: ["use", "u", "req", "require", "import", "i"],
-      castValue: "array",
+    app.option({
+      name: "use",
+      type: "array",
       description: "NPM packages I want to includes in my code",
-    },
+      validate: (packages) => {
+        return packages.length > 0
+      },
+      default: [],
+    }),
   ],
   flags: [
     {
       name: "muted",
-      aliases: ["mute", "silent"],
       flag: "m",
       description: "Disable message feedback",
+      aliases: ["mute"],
     },
     {
       name: "information",
-      aliases: ["info", "detail", "more"],
       flag: "i",
       description: "Information about output",
     },
@@ -48,11 +50,10 @@ export default new app.Command({
     const installed = new Set<string>()
 
     let code = message.args.code
+    let use = message.args.use
 
-    if (message.args.packages.length > 0) {
-      const given = new Set<string>(
-        message.args.packages.filter((p: string) => p)
-      )
+    if (message.args.use.length > 0) {
+      const given = new Set<string>(message.args.use.filter((p: string) => p))
 
       for (const pack of given) {
         if (alreadyInstalled(pack)) {
@@ -83,27 +84,27 @@ export default new app.Command({
 
     const req = Object.fromEntries(
       await Promise.all(
-        [...installed].map(async (pack) => [pack, await import(pack)])
-      )
+        [...installed].map(async (pack) => [pack, await import(pack)]),
+      ),
     )
 
     const evaluated = await ge.evaluate(
       code,
       { message, app, req },
-      "{ message, app, req }"
+      "{ message, app, req }",
     )
 
     if (message.args.muted) {
       await message.channel.send(
-        `\\✔ successfully evaluated in ${evaluated.duration}ms`
+        `\\✔ successfully evaluated in ${evaluated.duration}ms`,
       )
     } else {
-      const embed = new app.SafeMessageEmbed()
-        .setColor(evaluated.failed ? "RED" : "BLURPLE")
+      const embed = new app.EmbedBuilder()
+        .setColor(evaluated.failed ? "Red" : "Blurple")
         .setTitle(
           `${evaluated.failed ? "\\❌" : "\\✔"} Result of JS evaluation ${
             evaluated.failed ? "(failed)" : ""
-          }`
+          }`,
         )
         .setDescription(
           app.code.stringify({
@@ -111,17 +112,17 @@ export default new app.Command({
               .slice(0, 2000)
               .replace(/```/g, "\\`\\`\\`"),
             lang: "js",
-          })
+          }),
         )
 
       if (message.args.information)
-        embed.addField(
-          "Information",
-          app.code.stringify({
+        embed.addFields({
+          name: "Information",
+          value: app.code.stringify({
             content: `type: ${evaluated.type}\nclass: ${evaluated.class}\nduration: ${evaluated.duration}ms`,
             lang: "yaml",
-          })
-        )
+          }),
+        })
       await message.channel.send({ embeds: [embed] })
     }
 

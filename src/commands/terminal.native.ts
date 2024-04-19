@@ -1,7 +1,9 @@
+// native file, if you want edit it, remove the "native" suffix from the filename
+
 import cp from "child_process"
+import discord from "discord.js"
 
 import * as app from "../app.js"
-import * as core from "../app/core.js"
 
 export default new app.Command({
   name: "terminal",
@@ -9,7 +11,10 @@ export default new app.Command({
   aliases: ["term", "cmd", "command", "exec", ">", "process", "shell"],
   channelType: "all",
   botOwnerOnly: true,
-  coolDown: 5000,
+  cooldown: {
+    duration: 5000,
+    type: app.CooldownType.Global,
+  },
   rest: {
     all: true,
     name: "cmd",
@@ -21,8 +26,8 @@ export default new app.Command({
 
     const toEdit = await message.channel.send({
       embeds: [
-        new core.SafeMessageEmbed()
-          .setColor()
+        new discord.EmbedBuilder()
+          .setColor("Blurple")
           .setTitle("The process is running..."),
       ],
     })
@@ -32,10 +37,10 @@ export default new app.Command({
         ? err.stack ?? err.message
         : stderr.trim() || stdout || null
 
-      const embed = new core.SafeMessageEmbed()
-        .setColor(err ? "RED" : "BLURPLE")
+      const embed = new discord.EmbedBuilder()
+        .setColor(err ? "Red" : "Blurple")
         .setTitle(
-          err ? "\\❌ An error has occurred." : "\\✔ Successfully executed."
+          err ? "\\❌ An error has occurred." : "\\✔ Successfully executed.",
         )
 
       if (output)
@@ -47,7 +52,7 @@ export default new app.Command({
               .slice(0, 2000)
               .reverse()
               .join(""),
-          })
+          }),
         )
 
       toEdit.edit({ embeds: [embed] }).catch(() => {

@@ -6,9 +6,11 @@ export interface Hub {
   inviteLink?: string
 }
 
+/**
+ * Represent a hub linked on Discord channel.
+ */
 const table = new app.Table<Hub>({
   name: "hubs",
-  description: "Represent a hub linked on Discord channel",
   setup: (table) => {
     table.string("channelId").unique()
     table

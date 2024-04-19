@@ -12,6 +12,7 @@ import cp from "child_process"
 import path from "path"
 import fs from "fs"
 
+import { Handler } from "@ghom/handler"
 import { dirname } from "dirname-filename-esm"
 
 const __dirname = dirname(import.meta)
@@ -25,7 +26,7 @@ function _gitLog(cb) {
       `[${chalk.blueBright(newVersion.shortCommit)}]`,
       `${newVersion.date} -`,
       `${chalk.grey(newVersion.message)}`,
-    ].join(" ")
+    ].join(" "),
   )
 
   cb()
@@ -40,27 +41,25 @@ function _cleanTemp() {
 }
 
 function _checkGulpfile(cb) {
-  fetch(
-    "https://raw.githubusercontent.com/CamilleAbella/bot.ts/master/Gulpfile.js"
-  )
+  fetch("https://raw.githubusercontent.com/bot-ts/framework/master/Gulpfile.js")
     .then((res) => res.data)
     .then(async (remote) => {
       const local = await fs.promises.readFile(
         path.join(__dirname, "Gulpfile.js"),
-        "utf8"
+        "utf8",
       )
 
       if (remote !== local) {
         await fs.promises.writeFile(
           path.join(__dirname, "Gulpfile.js"),
           remote,
-          "utf8"
+          "utf8",
         )
 
         log(
           `${chalk.red("Gulpfile updated!")} Please re-run the ${chalk.cyan(
-            "update"
-          )} command.`
+            "update",
+          )} command.`,
         )
 
         process.exit(0)
@@ -70,7 +69,7 @@ function _checkGulpfile(cb) {
 }
 
 function _downloadTemp(cb) {
-  cp.exec("git clone https://github.com/CamilleAbella/bot.ts.git temp", cb)
+  cp.exec("git clone https://github.com/bot-ts/framework.git temp", cb)
 }
 
 function _build() {
@@ -84,9 +83,13 @@ function _build() {
         loader: {
           ".ts": "ts",
         },
-      })
+      }),
     )
     .pipe(gulp.dest("dist"))
+}
+
+function _copyKeepers() {
+  return gulp.src(["src/**/.keep"], { base: "src" }).pipe(gulp.dest("dist"))
 }
 
 function _watch(cb) {
@@ -120,18 +123,25 @@ function _copyTemp() {
         "temp/tests/**/*.js",
         "!temp/src/app/database.ts",
       ],
-      { base: "temp" }
+      { base: "temp" },
     )
     .pipe(gulp.dest(__dirname, { overwrite: true }))
+}
+
+function _copyConfig() {
+  return gulp
+    .src(["temp/src/config.ts"], { base: "temp" })
+    .pipe(gulp.dest(__dirname, { overwrite: false }))
 }
 
 function _updateDependencies(cb) {
   const localPackageJSON = JSON.parse(fs.readFileSync("./package.json", "utf8"))
   const remotePackageJSON = JSON.parse(
-    fs.readFileSync("./temp/package.json", "utf8")
+    fs.readFileSync("./temp/package.json", "utf8"),
   )
 
   localPackageJSON.main = remotePackageJSON.main
+  localPackageJSON.version = remotePackageJSON.version
 
   localPackageJSON.engines = {
     ...localPackageJSON.engines,
@@ -156,10 +166,10 @@ function _updateDependencies(cb) {
           `Updated  '${chalk.cyan(key)}' [${
             dependencies[key]
               ? `${chalk.blueBright(dependencies[key])} => ${chalk.blueBright(
-                newDependencies[key]
-              )}`
+                  newDependencies[key],
+                )}`
               : chalk.blueBright(newDependencies[key])
-          }]`
+          }]`,
         )
         dependencies[key] = newDependencies[key]
       }
@@ -171,19 +181,21 @@ function _updateDependencies(cb) {
   fs.writeFileSync(
     "./package.json",
     JSON.stringify(localPackageJSON, null, 2),
-    "utf8"
+    "utf8",
   )
 
-  cp.exec("npm i", cb)
+  import("@esbuild/linux-x64")
+    .then(() => cp.exec("npm i", cb))
+    .catch((err) => cp.exec("npm i --force", cb))
 }
 
 function _updateDatabaseFile() {
   const packageJSON = JSON.parse(fs.readFileSync("./package.json", "utf8"))
   const database = ["mysql2", "sqlite3", "pg"].find(
-    (name) => name in packageJSON.dependencies
+    (name) => name in packageJSON.dependencies,
   )
   return gulp
-    .src("node_modules/make-bot.ts/templates/" + database)
+    .src("node_modules/@ghom/bot.ts-cli/templates/" + database)
     .pipe(rename("database.ts"))
     .pipe(gulp.dest("src/app"))
 }
@@ -200,24 +212,65 @@ function _removeDuplicates() {
         fs.existsSync(
           path.join(
             file.dirname,
-            file.basename.replace(".native" + file.extname, file.extname)
-          )
-        )
-      )
+            file.basename.replace(".native" + file.extname, file.extname),
+          ),
+        ),
+      ),
     )
     .pipe(vinyl(del))
 }
 
-export const build = gulp.series(_cleanDist, _build)
-export const watch = gulp.series(_cleanDist, _build, _watch)
+async function _generateReadme(cb) {
+  const packageJSON = JSON.parse(
+    await fs.promises.readFile("./package.json", "utf8"),
+  )
+  const database = ["mysql2", "sqlite3", "pg"].find(
+    (name) => name in packageJSON.dependencies,
+  )
+  const configFile = await fs.promises.readFile("./src/config.ts", "utf8")
+  const template = await fs.promises.readFile("./template.md", "utf8")
+
+  const handle = async (dirname) => {
+    const handler = new Handler(path.join(__dirname, "dist", dirname), {
+      pattern: /\.js$/i,
+      loader: async (filepath) => {
+        return (await import(`file://${filepath}`)).default
+      },
+    })
+
+    await handler.init()
+
+    return handler.elements
+  }
+
+  const slash = await handle("slash")
+  const commands = await handle("commands")
+  const listeners = await handle("listeners")
+  const namespaces = await handle("namespaces")
+  const tables = await handle("tables")
+
+  const readme = template.replace(/\{\{(.+?)}}/g, (match, key) => {
+    log(`Evaluated '${chalk.cyan(key)}'`)
+    return eval(key)
+  })
+
+  console.log(readme)
+
+  cb()
+}
+
+export const build = gulp.series(_cleanDist, _build, _copyKeepers)
+export const watch = gulp.series(build, _watch)
+export const readme = gulp.series(build, _generateReadme)
 export const update = gulp.series(
   _checkGulpfile,
   _cleanTemp,
   _downloadTemp,
   _copyTemp,
+  _copyConfig,
   _removeDuplicates,
   _updateDependencies,
   _updateDatabaseFile,
   _gitLog,
-  _cleanTemp
+  _cleanTemp,
 )

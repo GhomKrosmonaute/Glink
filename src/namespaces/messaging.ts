@@ -19,7 +19,7 @@ export const hubOnly: app.Middleware<"all"> = async (message, data) => {
 
 export const networkOwnerOnly: app.Middleware<"all"> = async (
   message,
-  data
+  data,
 ) => {
   return {
     result:
@@ -33,10 +33,10 @@ export const networkOwnerOnly: app.Middleware<"all"> = async (
 
 export async function sendTextToHubs(
   client: app.Client,
-  message: string | { embeds: app.MessageEmbed[] },
-  hubs: Hub[]
+  message: string | { embeds: app.EmbedBuilder[] },
+  hubs: Hub[],
 ) {
-  const channels: app.AnyChannel[] = []
+  const channels: app.Channel[] = []
 
   for (const hub of hubs) {
     try {
@@ -50,17 +50,17 @@ export async function sendTextToHubs(
 
   return Promise.all(
     channels.map((channel) => {
-      if (channel.isText()) return channel.send(message)
-    })
+      if (channel.isTextBased()) return channel.send(message)
+    }),
   )
 }
 
 export async function sendHubMessageToHubs(
   message: app.Message,
   hubs: Hub[],
-  inviteLink?: string
+  inviteLink?: string,
 ): Promise<unknown> {
-  const channels: app.AnyChannel[] = []
+  const channels: app.Channel[] = []
 
   for (const hub of hubs) {
     try {
@@ -79,16 +79,16 @@ export async function sendHubMessageToHubs(
   } catch (error) {
     return Promise.all(
       channels.map((channel) => {
-        if (channel.isText() && channel.id !== message.channel.id)
+        if (channel.isTextBased() && channel.id !== message.channel.id)
           return channel.send({ embeds: [embed] })
-      })
+      }),
     )
   }
 
   return Promise.all(
     channels.map((channel) => {
-      if (channel.isText()) return channel.send({ embeds: [embed] })
-    })
+      if (channel.isTextBased()) return channel.send({ embeds: [embed] })
+    }),
   )
 }
 
@@ -107,14 +107,14 @@ export function extractEmbedParams(href: string): EmbedParams {
 
 export function compileEmbedParams(params: Omit<EmbedParams, "id">): string {
   const url = new Url.URL("https://embed.data")
-  url.searchParams.append("id", app.SnowflakeUtil.generate())
+  url.searchParams.append("id", app.SnowflakeUtil.generate().toString())
   url.searchParams.append("authorId", params.authorId)
   return url.href
 }
 
 export async function deleteMessage(
   target: app.Message,
-  actionAuthorId: app.Snowflake
+  actionAuthorId: app.Snowflake,
 ): Promise<unknown> {
   if (target.embeds.length === 0 || !target.embeds[0].url)
     return target.channel.send("Please target a valid chat message.")
@@ -135,12 +135,13 @@ export async function deleteMessage(
   if (!network)
     return removeHub.bind(target.client)(
       hub.channelId,
-      "The network of this hub has been deleted."
+      "The network of this hub has been deleted.",
     )
 
   if (
     actionAuthorId !== network.ownerId &&
-    actionAuthorId !== targetParams.authorId
+    actionAuthorId !== targetParams.authorId &&
+    !target.member?.permissions.has("ManageMessages", true)
   )
     return target.channel.send("You don't have permission for this action.")
 
@@ -155,7 +156,7 @@ export async function deleteMessage(
       return removeHub.bind(target.client)(hub.channelId)
     }
 
-    if (channel.isText()) {
+    if (channel.isTextBased()) {
       const messages = await channel.messages.fetch()
 
       const message = messages.find((message) => {
@@ -173,27 +174,24 @@ export async function deleteMessage(
 
 function glinkEmbedFrom(
   message: app.Message & { client: app.Client<true> },
-  inviteLink?: string
-): app.MessageEmbed {
-  const embed = new app.SafeMessageEmbed()
+  inviteLink?: string,
+): app.EmbedBuilder {
+  const embed = new app.EmbedBuilder()
     .setURL(
       compileEmbedParams({
         authorId: message.author.id,
-      })
+      }),
     )
-    .setColor(message.member?.displayHexColor ?? "BLURPLE")
+    .setColor(message.member?.displayHexColor ?? "Blurple")
     .setAuthor({
       name: message.author.username,
-      iconURL: message.author.displayAvatarURL({
-        dynamic: true,
-      }),
+      iconURL: message.author.displayAvatarURL(),
       url: inviteLink,
     })
     .setFooter({
       text: message.guild?.name || "Unknown guild name",
       iconURL:
-        message.guild?.iconURL({ dynamic: true }) ??
-        message.client.user.displayAvatarURL({ dynamic: true }),
+        message.guild?.iconURL() ?? message.client.user.displayAvatarURL(),
     })
     .setTimestamp()
 
@@ -214,9 +212,9 @@ function glinkEmbedFrom(
   }
 
   function attachImage(url: string): boolean {
-    if (!embed.image) {
+    if (!embed.data.image) {
       embed.setImage(url)
-    } else if (!embed.thumbnail) {
+    } else if (!embed.data.thumbnail) {
       embed.setThumbnail(url)
     } else {
       return false
@@ -256,7 +254,7 @@ function glinkEmbedFrom(
     /^<(a)?:[a-z-_]+:(\d+)>$/gi,
     (full, animated, id) => {
       return getEmojiURL({ animated: !!animated, id })
-    }
+    },
   )
 
   if (message.content) embed.setDescription(message.content)
@@ -293,11 +291,11 @@ export async function removeNetwork(this: app.Client, ownerId: app.Snowflake) {
 export async function removeHub(
   this: app.Client,
   channelId: app.Snowflake,
-  reason?: string
+  reason?: string,
 ) {
   await hubsData.query.delete().where("channelId", channelId)
 
   const channel = this.channels.cache.get(channelId)
 
-  if (reason && channel && channel.isText()) channel.send(reason).catch()
+  if (reason && channel && channel.isTextBased()) channel.send(reason).catch()
 }

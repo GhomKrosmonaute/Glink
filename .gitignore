@@ -1,14 +1,26 @@
-node_modules
-/git
+# private
+
 .env
-.npm
-dist
-temp
+
+# generated dir
+
+/dist
+/temp
 /data
+
+# node
+
+node_modules
+
+# code editor
+
 .idea
 .vscode
-package-lock.json
-yarn.lock
+
+# package managers
+
+.npm
+pnpm-lock.yaml
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

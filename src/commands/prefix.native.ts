@@ -1,6 +1,6 @@
 import * as app from "../app.js"
 
-import guilds from "../tables/guilds.native.js"
+import guilds from "../tables/guilds.js"
 
 export default new app.Command({
   name: "prefix",
@@ -10,7 +10,8 @@ export default new app.Command({
   positional: [
     {
       name: "prefix",
-      checkValue: (value) => value.length < 10 && /^\S/.test(value),
+      type: "string",
+      validate: (value) => value.length < 10 && /^\S/.test(value),
       description: "The new prefix",
     },
   ],
@@ -20,8 +21,8 @@ export default new app.Command({
     if (!prefix)
       return message.channel.send(
         `My current prefix for "**${message.guild}**" is \`${await app.prefix(
-          message.guild
-        )}\``
+          message.guild,
+        )}\``,
       )
 
     await guilds.query
@@ -33,7 +34,7 @@ export default new app.Command({
       .merge()
 
     await message.channel.send(
-      `My new prefix for "**${message.guild}**" is \`${prefix}\``
+      `My new prefix for "**${message.guild}**" is \`${prefix}\``,
     )
   },
 })

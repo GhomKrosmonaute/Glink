@@ -11,14 +11,15 @@ export default new app.Command({
   positional: [
     {
       name: "user",
+      type: "user",
       description: "The user to mute",
-      castValue: "user",
       required: true,
     },
   ],
   options: [
     {
       name: "reason",
+      type: "string",
       description: "Reason of mute",
       aliases: ["m", "message"],
     },
@@ -39,7 +40,7 @@ export default new app.Command({
     mutesData.query.insert(mute)
 
     return message.channel.send(
-      `You have successfully muted **${message.args.user.username}** from the "**${network.displayName}**" network.`
+      `You have successfully muted **${message.args.user.username}** from the "**${network.displayName}**" network.`,
     )
   },
   subs: [
@@ -60,7 +61,7 @@ export default new app.Command({
 
         new app.StaticPaginator({
           pages: app.divider(mutes, 10).map((page) =>
-            new app.MessageEmbed()
+            new app.EmbedBuilder()
               .setTitle("Muted list - " + network.displayName)
               .setDescription(
                 page
@@ -71,8 +72,8 @@ export default new app.Command({
                       mute.reason ?? "undefined reason"
                     }`
                   })
-                  .join("\n")
-              )
+                  .join("\n"),
+              ),
           ),
           channel: message.channel,
           filter: (reaction, user) => user.id === message.author.id,

@@ -6,7 +6,7 @@ const listener: app.Listener<"guildMemberRemove"> = {
   async run(member) {
     if (
       !member.client.guilds.cache.some((guild) =>
-        guild.members.cache.has(member.id)
+        guild.members.cache.has(member.id),
       )
     ) {
       await app.removeNetwork.bind(member.client)(member.id)

@@ -16,7 +16,7 @@ export default new app.Command({
       .first()) as Network
     return message.channel.send({
       embeds: [
-        new app.MessageEmbed()
+        new app.EmbedBuilder()
           .setTitle(`Hub list - ${network.displayName}`)
           .setDescription(
             (await app.getNetworkHubs(network.id))
@@ -24,7 +24,7 @@ export default new app.Command({
                 const guildName =
                   (
                     message.client.channels.cache.get(
-                      hub.channelId
+                      hub.channelId,
                     ) as app.GuildChannel
                   )?.guild.name ?? "not a guild channel"
                 return `\`${hub.channelId}\` ${
@@ -33,7 +33,7 @@ export default new app.Command({
                     : guildName
                 }`
               })
-              .join("\n")
+              .join("\n"),
           ),
       ],
     })
@@ -47,9 +47,10 @@ export default new app.Command({
       positional: [
         {
           name: "channel",
+          type: "channel",
           description: "The hub to remove",
-          castValue: "channel",
-          default: (message) => message?.channel.toString() ?? "no channel",
+          default: (message: app.Message) =>
+            message?.channel.toString() ?? "no channel",
         },
       ],
       async run(message) {
@@ -62,11 +63,11 @@ export default new app.Command({
         if (message.author.id === process.env.BOT_OWNER) {
           await app.removeHub.bind(message.client)(
             id,
-            `This hub was removed by the bot owner.`
+            `This hub was removed by the bot owner.`,
           )
 
           return message.channel.send(
-            "The targeted hub was successfully removed."
+            "The targeted hub was successfully removed.",
           )
         }
 
@@ -83,18 +84,18 @@ export default new app.Command({
 
         if (!networkOwner && !guildOwner)
           return message.channel.send(
-            "The targeted hub does not belong to you."
+            "The targeted hub does not belong to you.",
           )
 
         await app.removeHub.bind(message.client)(
           id,
           `This hub was removed by the "**${
             guildOwner ? message.guild?.name : network.displayName
-          }**" owner.`
+          }**" owner.`,
         )
 
         return message.channel.send(
-          "The targeted hub was successfully removed."
+          "The targeted hub was successfully removed.",
         )
       },
     }),

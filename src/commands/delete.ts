@@ -6,12 +6,15 @@ export default new app.Command({
   description: "Delete a network message",
   channelType: "all",
   middlewares: [app.hubOnly],
-  coolDown: 5000,
+  cooldown: {
+    type: app.CooldownType.Global,
+    duration: 5000,
+  },
   positional: [
     {
       name: "target",
+      type: "message",
       description: "The resolvable message",
-      castValue: "message",
       required: true,
     },
   ],

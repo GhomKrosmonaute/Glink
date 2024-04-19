@@ -11,7 +11,7 @@ export default new app.Command({
     {
       name: "user",
       description: "The use to mute",
-      castValue: "user",
+      type: "user",
       required: true,
     },
   ],
@@ -28,7 +28,7 @@ export default new app.Command({
 
     if (!mute)
       return message.channel.send(
-        `**${message.args.user.username}** is not muted.`
+        `**${message.args.user.username}** is not muted.`,
       )
 
     await mutesData.query
@@ -37,7 +37,7 @@ export default new app.Command({
       .and.where("userId", message.args.user.id)
 
     return message.channel.send(
-      `You have successfully un-muted **${message.args.user.username}** from the "**${network.displayName}**" network.`
+      `You have successfully un-muted **${message.args.user.username}** from the "**${network.displayName}**" network.`,
     )
   },
 })

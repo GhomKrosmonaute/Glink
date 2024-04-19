@@ -7,17 +7,17 @@ export default new app.Command({
   async run(message) {
     return message.channel.send({
       embeds: [
-        new app.MessageEmbed()
-          .setColor("BLURPLE")
+        new app.EmbedBuilder()
+          .setColor("Blurple")
           .setTitle("My invite link")
           .setDescription(
-            "[View permissions](https://discordapi.com/permissions.html#388176)"
+            "[View permissions](https://discordapi.com/permissions.html#388176)",
           )
           .setURL(
             message.client.generateInvite({
-              scopes: ["bot"],
-              permissions: new app.Permissions(388176n),
-            })
+              scopes: [app.OAuth2Scopes.Bot],
+              permissions: 388176n,
+            }),
           ),
       ],
     })

@@ -7,9 +7,11 @@ export interface Network {
   displayName: string
 }
 
+/**
+ * Represent a network linked on Discord user.
+ */
 const table = new app.Table<Network>({
   name: "networks",
-  description: "Represent a network linked on Discord user",
   priority: 10,
   setup: (table) => {
     table.increments("id").primary().unsigned()

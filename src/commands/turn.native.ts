@@ -1,3 +1,5 @@
+// native file, if you want edit it, remove the "native" suffix from the filename
+
 import * as app from "../app.js"
 
 export default new app.Command({
@@ -7,17 +9,17 @@ export default new app.Command({
   channelType: "all",
   botOwnerOnly: true,
   positional: [
-    {
+    app.positional({
       name: "activated",
       description: "Is command handling activated",
-      default: () => String(!app.cache.ensure<boolean>("turn", true)),
-      castValue: "boolean",
-    },
+      default: () => !app.cache.ensure<boolean>("turn", true),
+      type: "boolean",
+    }),
   ],
   async run(message) {
     app.cache.set("turn", message.args.activated)
     return message.channel.send(
-      `Command handling ${message.args.activated ? "activated" : "disabled"} `
+      `Command handling ${message.args.activated ? "activated" : "disabled"} `,
     )
   },
 })
