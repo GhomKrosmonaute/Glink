@@ -4,7 +4,7 @@ import { z } from "zod"
 export const config = new Config({
   ignoreBots: true,
   async getPrefix(message) {
-    return import("#src/namespaces/tools.ts").then((tools) =>
+    return import("#app").then((tools) =>
       tools.prefix(message.guild ?? undefined),
     )
   },
