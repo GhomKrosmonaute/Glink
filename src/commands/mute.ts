@@ -1,7 +1,7 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
-import mutesData, { Mute } from "../tables/mutes.js"
-import networks, { Network } from "../tables/networks.js"
+import mutesData, { Mute } from "#tables/mutes.ts"
+import networks, { Network } from "#tables/networks.ts"
 
 export default new app.Command({
   name: "mute",
@@ -60,21 +60,23 @@ export default new app.Command({
           .where("networkId", network.id)
 
         new app.StaticPaginator({
-          pages: app.divider(mutes, 10).map((page) =>
-            new app.EmbedBuilder()
-              .setTitle("Muted list - " + network.displayName)
-              .setDescription(
-                page
-                  .map((mute) => {
-                    return `\`${app
-                      .dayjs(mute.date)
-                      .format("DD/MM/YY HH:mm")}\` - **${mute.userId}** - ${
-                      mute.reason ?? "undefined reason"
-                    }`
-                  })
-                  .join("\n"),
-              ),
-          ),
+          pages: app.divider(mutes, 10).map((page) => ({
+            embeds: [
+              new app.EmbedBuilder()
+                .setTitle("Muted list - " + network.displayName)
+                .setDescription(
+                  page
+                    .map((mute) => {
+                      return `\`${app
+                        .dayjs(mute.date)
+                        .format("DD/MM/YY HH:mm")}\` - **${mute.userId}** - ${
+                        mute.reason ?? "undefined reason"
+                      }`
+                    })
+                    .join("\n"),
+                ),
+            ],
+          })),
           channel: message.channel,
           filter: (reaction, user) => user.id === message.author.id,
         })

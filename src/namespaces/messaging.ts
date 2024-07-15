@@ -1,9 +1,8 @@
-import * as app from "../app.js"
+import * as app from "#app"
 import * as Url from "url"
-import ss from "string-similarity"
 
-import hubsData, { Hub } from "../tables/hubs.js"
-import networksData, { Network } from "../tables/networks.js"
+import hubsData, { Hub } from "#tables/hubs.ts"
+import networksData from "#tables/networks.ts"
 import discord from "discord.js"
 
 export const hubOnly: app.Middleware<"all"> = async (message, data) => {

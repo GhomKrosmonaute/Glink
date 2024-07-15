@@ -1,7 +1,7 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
-import networks, { Network } from "../tables/networks.js"
-import mutesData from "../tables/mutes.js"
+import networks, { Network } from "#tables/networks.ts"
+import mutesData from "#tables/mutes.ts"
 
 export default new app.Command({
   name: "unmute",

@@ -5,12 +5,24 @@
     "module": "esnext",
     "target": "ES2020",
     "outDir": "dist",
-    "lib": ["ES2020"],
+    "lib": ["ES2023"],
     "strict": true,
     "sourceMap": true,
     "declaration": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "#app": ["./src/app.ts"],
+      "#config": ["./src/config.ts"],
+      "#env": ["./src/app/env.ts"],
+      "#client": ["./src/app/client.ts"],
+      "#logger": ["./src/app/logger.ts"],
+      "#database": ["./src/app/database.ts"],
+      "#src/*": ["./src/*"],
+      "#tables/*": ["./src/tables/*"]
+    }
+  },
 }

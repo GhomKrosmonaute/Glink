@@ -1,31 +1,34 @@
 // system file, please don't modify it
 
-import * as app from "../app.js"
+import * as app from "#app"
+import config from "#config"
+import env from "#env"
+
 import yargsParser from "yargs-parser"
 
 const listener: app.Listener<"messageCreate"> = {
   event: "messageCreate",
   description: "Handle messages for commands",
   async run(message) {
-    if (app.config.ignoreBots && message.author.bot) return
+    if (config.ignoreBots && message.author.bot) return
 
     if (!app.isNormalMessage(message)) return
 
-    const prefix = await app.config.getPrefix(message)
+    const prefix = config.getPrefix
+      ? await config.getPrefix(message)
+      : env.BOT_PREFIX
 
     if (new RegExp(`^<@!?${message.client.user.id}>$`).test(message.content))
       return message.channel
-        .send({
-          embeds: [
-            new app.EmbedBuilder()
-              .setColor("Blurple")
-              .setDescription(`My prefix is \`${prefix}\``),
-          ],
-        })
+        .send(
+          await app.getSystemMessage("default", {
+            description: `My prefix is \`${prefix}\``,
+          }),
+        )
         .catch()
 
     message.usedAsDefault = false
-    message.isFromBotOwner = message.author.id === process.env.BOT_OWNER!
+    message.isFromBotOwner = message.author.id === app.env.BOT_OWNER
 
     app.emitMessage(message.channel, message)
     app.emitMessage(message.author, message)
@@ -38,7 +41,7 @@ const listener: app.Listener<"messageCreate"> = {
       app.emitMessage(message.member, message)
     }
 
-    let dynamicContent = message.content.slice()
+    let dynamicContent = message.content
 
     const cut = function (key: string) {
       dynamicContent = dynamicContent.slice(key.length).trim()
@@ -61,7 +64,7 @@ const listener: app.Listener<"messageCreate"> = {
     if (
       key !== "turn" &&
       !app.cache.ensure<boolean>("turn", true) &&
-      message.author.id !== process.env.BOT_OWNER
+      message.author.id !== app.env.BOT_OWNER
     )
       return
 
@@ -132,7 +135,7 @@ const listener: app.Listener<"messageCreate"> = {
     })
 
     if (typeof prepared !== "boolean")
-      return message.channel.send({ embeds: [prepared] }).catch()
+      return message.channel.send(prepared).catch()
 
     if (!prepared) return
 
@@ -142,14 +145,7 @@ const listener: app.Listener<"messageCreate"> = {
       app.error(error, cmd.filepath!, true)
 
       message.channel
-        .send(
-          app.code.stringify({
-            content: `Error: ${
-              error.message?.replace(/\x1b\[\d+m/g, "") ?? "unknown"
-            }`,
-            lang: "js",
-          }),
-        )
+        .send(await app.getSystemMessage("error", { error }))
         .catch((error) => {
           app.error(error, cmd!.filepath!, true)
         })

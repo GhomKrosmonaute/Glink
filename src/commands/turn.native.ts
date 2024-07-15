@@ -1,6 +1,6 @@
 // native file, if you want edit it, remove the "native" suffix from the filename
 
-import * as app from "../app.js"
+import * as app from "#app"
 
 export default new app.Command({
   name: "turn",
@@ -19,7 +19,7 @@ export default new app.Command({
   async run(message) {
     app.cache.set("turn", message.args.activated)
     return message.channel.send(
-      `Command handling ${message.args.activated ? "activated" : "disabled"} `,
+      `${app.getSystemEmoji("success")} Command handling ${message.args.activated ? "activated" : "disabled"} `,
     )
   },
 })

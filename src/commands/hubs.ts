@@ -1,7 +1,7 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
-import networks, { Network } from "../tables/networks.js"
-import hubs from "../tables/hubs.js"
+import networks, { Network } from "#tables/networks.ts"
+import hubs from "#tables/hubs.ts"
 
 export default new app.Command({
   name: "hubs",

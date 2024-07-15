@@ -1,9 +1,9 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
 import { URL } from "url"
 
-import networks, { Network } from "../tables/networks.js"
-import hubs, { Hub } from "../tables/hubs.js"
+import networks from "#tables/networks.ts"
+import hubs, { Hub } from "#tables/hubs.ts"
 
 export default new app.Command({
   name: "networks",
@@ -27,43 +27,48 @@ export default new app.Command({
         new app.StaticPaginator({
           pages: await Promise.all(
             app.divider(await networks.query.select(), 10).map(async (page) => {
-              return new app.EmbedBuilder()
-                .setTitle("Networks list")
-                .setDescription(
-                  (
-                    await Promise.all(
-                      page.map(async (network) => {
-                        const networkUsers = new Set(
-                          (await app.getNetworkHubs(network.id))
-                            .map((hub) => {
-                              const channel = message.client.channels.cache.get(
-                                hub.channelId,
-                              )
-                              if (
-                                !channel ||
-                                !(channel instanceof app.GuildChannel)
-                              )
-                                return []
-                              return channel.guild.members.cache
-                                .filter(({ user }) => !user.bot)
-                                .map((member) => member.id)
-                            })
-                            .flat(),
-                        )
+              return {
+                embeds: [
+                  new app.EmbedBuilder()
+                    .setTitle("Networks list")
+                    .setDescription(
+                      (
+                        await Promise.all(
+                          page.map(async (network) => {
+                            const networkUsers = new Set(
+                              (await app.getNetworkHubs(network.id))
+                                .map((hub) => {
+                                  const channel =
+                                    message.client.channels.cache.get(
+                                      hub.channelId,
+                                    )
+                                  if (
+                                    !channel ||
+                                    !(channel instanceof app.GuildChannel)
+                                  )
+                                    return []
+                                  return channel.guild.members.cache
+                                    .filter(({ user }) => !user.bot)
+                                    .map((member) => member.id)
+                                })
+                                .flat(),
+                            )
 
-                        return `\`${app.forceTextSize(
-                          network.displayName,
-                          20,
-                          true,
-                        )}\` - [ ${
-                          networkUsers.size
-                        } 👤 ] - owner: ${message.client.users.cache.get(
-                          network.ownerId,
-                        )}`
-                      }),
-                    )
-                  ).join("\n"),
-                )
+                            return `\`${app.forceTextSize(
+                              network.displayName,
+                              20,
+                              true,
+                            )}\` - [ ${
+                              networkUsers.size
+                            } 👤 ] - owner: ${message.client.users.cache.get(
+                              network.ownerId,
+                            )}`
+                          }),
+                        )
+                      ).join("\n"),
+                    ),
+                ],
+              }
             }),
           ),
           channel: message.channel,

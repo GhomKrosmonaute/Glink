@@ -1,6 +1,6 @@
 // system file, please don't modify it
 
-import * as app from "../app.js"
+import * as app from "#app"
 
 const listener: app.Listener<"interactionCreate"> = {
   event: "interactionCreate",
@@ -14,7 +14,10 @@ const listener: app.Listener<"interactionCreate"> = {
 
       if (paginator) return paginator.handleInteraction(interaction)
 
-      await interaction.deferUpdate()
+      return interaction.reply({
+        content: "This paginator is no longer available",
+        ephemeral: true,
+      })
     }
   },
 }

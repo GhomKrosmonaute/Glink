@@ -4,7 +4,7 @@ import figlet from "figlet"
 import boxen from "boxen"
 import chalk from "chalk"
 
-import * as app from "../app.js"
+import * as app from "#app"
 
 import { filename } from "dirname-filename-esm"
 
@@ -15,10 +15,10 @@ const listener: app.Listener<"afterReady"> = {
   description: "Just log that bot is ready",
   once: true,
   async run() {
-    app.log(
+    app.success(
       `ok i'm ready! ${chalk.blue(
         "My default prefix is",
-      )} ${chalk.bgBlueBright.black(process.env.BOT_PREFIX)}`,
+      )} ${chalk.bold.blueBright(app.env.BOT_PREFIX)}`,
     )
 
     figlet(app.packageJSON.name, (err, value) => {

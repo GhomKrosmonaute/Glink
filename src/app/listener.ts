@@ -1,14 +1,15 @@
 // system file, please don't modify it
 
+import url from "url"
 import discord from "discord.js"
 import path from "path"
 import chalk from "chalk"
-import apiTypes from "discord-api-types/v8.js"
+import apiTypes from "discord-api-types/v8"
 
 import * as handler from "@ghom/handler"
 
-import * as logger from "./logger.js"
-import client from "./client.js"
+import logger from "#logger"
+import client from "#client"
 
 const readyListeners = new discord.Collection<Listener<"ready">, boolean>()
 
@@ -17,7 +18,7 @@ export const listenerHandler = new handler.Handler(
   {
     pattern: /\.js$/,
     loader: async (filepath) => {
-      const file = await import("file://" + filepath)
+      const file = await import(url.pathToFileURL(filepath).href)
       return file.default as Listener<any>
     },
     onLoad: async (filepath, listener) => {

@@ -1,13 +1,17 @@
-import * as app from "./app.js"
+import { Config } from "#src/app/config.ts"
+import { z } from "zod"
 
-export const config: app.Config = {
+export const config = new Config({
   ignoreBots: true,
   async getPrefix(message) {
-    return app.prefix(message.guild ?? undefined)
+    return import("#src/namespaces/tools.ts").then((tools) =>
+      tools.prefix(message.guild ?? undefined),
+    )
   },
+  envSchema: z.object({}),
   client: {
     intents: [
-      "MessageContent", // olala quel débile je suis
+      "MessageContent",
       "Guilds",
       "GuildMembers",
       "GuildBans",
@@ -25,4 +29,6 @@ export const config: app.Config = {
       "DirectMessageTyping",
     ],
   },
-}
+})
+
+export default config.options

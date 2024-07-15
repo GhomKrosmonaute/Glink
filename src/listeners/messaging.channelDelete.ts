@@ -1,6 +1,6 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
-import hubs from "../tables/hubs.js"
+import hubs from "#tables/hubs.ts"
 
 const listener: app.Listener<"channelDelete"> = {
   event: "channelDelete",

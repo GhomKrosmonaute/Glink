@@ -1,7 +1,7 @@
-import * as app from "../app.js"
+import * as app from "#app"
 
-import hubs from "../tables/hubs.js"
-import mutes from "../tables/mutes.js"
+import hubs from "#tables/hubs.ts"
+import mutes from "#tables/mutes.ts"
 
 const listener: app.Listener<"messageCreate"> = {
   event: "messageCreate",

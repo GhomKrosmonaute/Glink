@@ -1,6 +1,6 @@
 // native file, if you want edit it, remove the "native" suffix from the filename
 
-import * as app from "../app.js"
+import * as app from "#app"
 
 import time from "tims"
 
@@ -18,22 +18,23 @@ export default new app.Command({
   async run(message) {
     const conf = app.packageJSON
 
-    const embed = new app.EmbedBuilder()
-      .setColor("Blurple")
-      .setAuthor({
+    const databaseClient = app.getDatabaseDriverName()
+
+    const systemMessageOptions: Partial<app.SystemMessageOptions> = {
+      description: conf.description ?? "No description",
+      author: {
         name: `Information about ${message.client.user.tag}`,
         iconURL: message.client.user?.displayAvatarURL(),
-      })
-      .setDescription(conf.description)
-      .setTimestamp()
-      .addFields([
+      },
+      timestamp: new Date(),
+      fields: [
         {
           name: conf.name,
-          value: app.code.stringify({
+          value: await app.code.stringify({
             lang: "yml",
             content: [
               `author: ${
-                message.client.users.resolve(process.env.BOT_OWNER!)!.username
+                message.client.users.resolve(app.env.BOT_OWNER)!.username
               }`,
               `uptime: ${time.duration(app.uptime(), {
                 format: "second",
@@ -43,18 +44,22 @@ export default new app.Command({
                 2,
               )}mb`,
               `ping: ${message.client.ws.ping}ms`,
-              `database: ${app.orm.database.client.constructor.name}`,
+              `database: ${databaseClient}@${app.packageJSON.dependencies?.[databaseClient] ?? "unknown"}`,
+              `node: ${process.version}`,
             ].join("\n"),
           }),
           inline: true,
         },
         {
           name: "Cache",
-          value: app.code.stringify({
+          value: await app.code.stringify({
             lang: "yml",
             content: [
               `guilds: ${message.client.guilds.cache.size}`,
               `users: ${message.client.users.cache.size}`,
+              `members: ${message.client.guilds.cache.reduce((acc, guild) => {
+                return acc + guild.members.cache.size
+              }, 0)}`,
               `channels: ${message.client.channels.cache.size}`,
               `roles: ${message.client.guilds.cache.reduce((acc, guild) => {
                 return acc + guild.roles.cache.size
@@ -72,44 +77,50 @@ export default new app.Command({
           }),
           inline: true,
         },
-      ])
+      ],
+    }
 
-    return message.channel.send({
-      embeds: [
-        !message.args.dependencies
-          ? embed
-          : embed.addFields([
-              {
-                name: app.blankChar,
-                value: app.blankChar,
-                inline: false,
-              },
-              {
-                name: "Dependencies",
-                value: app.code.stringify({
+    if (message.args.dependencies)
+      systemMessageOptions.fields?.push(
+        {
+          name: app.blankChar,
+          value: app.blankChar,
+          inline: false,
+        },
+        {
+          name: "Dependencies",
+          value:
+            conf.dependencies && Object.keys(conf.dependencies).length > 0
+              ? await app.code.stringify({
                   lang: "yml",
                   content: Object.entries(conf.dependencies)
                     .map(([name, version]) => {
                       return `${name.replace(/@/g, "")}: ${version}`
                     })
                     .join("\n"),
-                }),
-                inline: true,
-              },
-              {
-                name: "Dev dependencies",
-                value: app.code.stringify({
+                })
+              : "No dependencies",
+          inline: true,
+        },
+        {
+          name: "Dev dependencies",
+          value:
+            conf.devDependencies && Object.keys(conf.devDependencies).length > 0
+              ? await app.code.stringify({
                   lang: "yml",
                   content: Object.entries(conf.devDependencies)
                     .map(([name, version]) => {
                       return `${name.replace(/@/g, "")}: ${version}`
                     })
                     .join("\n"),
-                }),
-                inline: true,
-              },
-            ]),
-      ],
-    })
+                })
+              : "No dev dependencies",
+          inline: true,
+        },
+      )
+
+    return message.channel.send(
+      await app.getSystemMessage("default", systemMessageOptions),
+    )
   },
 })
